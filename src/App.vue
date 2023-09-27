@@ -1,84 +1,40 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import useBeep from './composables/useBeep.js'
+import SpectrogramHistory from './components/SpectrogramHistory.vue'
 
-const started = ref(false)
-const startStopText = computed(() => (started.value ? 'Stop Audio' : 'Start Audio'))
+const running = ref(false)
+const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 const beeping = ref(false)
+const frequency = ref(440)
+const noises = ref<AudioNode[]>([])
 
 let audioContext: AudioContext | undefined
-let gainParam: AudioParam | undefined
+let beep: (ev: Event) => void = () => {} // replaced when beeper is created after user interaction required for Web Audio
 
 const startStop = () => {
-  if (started.value) return stop()
+  if (running.value) return stop()
   if (audioContext) return start()
 
   audioContext = new AudioContext()
-  const tone = new OscillatorNode(audioContext, { type: 'sine', frequency: 440 })
-  const gain = new GainNode(audioContext, { gain: 0 })
-  gainParam = gain.gain
 
-  tone.connect(gain)
-  gain.connect(audioContext.destination)
+  const beeper = useBeep(audioContext, frequency)
 
-  tone.start()
+  noises.value = [beeper.node]
+  beep = () => beeper.beep()
+  watch(beeper.beeping, (beepersBeeping) => (beeping.value = beepersBeeping))
+
+  audioContext.addEventListener('statechange', () => {
+    running.value = audioContext ? audioContext.state == 'running' : false
+  })
+
   start()
 
   function start() {
-    if (!audioContext) return
-    started.value = true
-    audioContext.resume()
+    audioContext?.resume()
   }
   function stop() {
-    started.value = false
     audioContext?.suspend()
-  }
-}
-
-const beep = () => {
-  if (!audioContext || !gainParam) return
-  const ac = audioContext
-  const gp = gainParam
-  try {
-    const startTime = ac.currentTime
-    const duration = 1
-    const tc = 0.02
-    const rampTime = 5 * tc
-
-    beeping.value = true
-    // ramp up
-    gp.setTargetAtTime(1, startTime, tc)
-
-    atAudioTime(ac, startTime + rampTime, (unmutedTime) => {
-      // stop changes, fully unmuted
-      gp.cancelScheduledValues(unmutedTime)
-      gp.setValueAtTime(1, unmutedTime)
-    })
-
-    atAudioTime(ac, startTime + duration - rampTime, (rampDownTime) => {
-      // ramp down
-      gp.setTargetAtTime(0, rampDownTime, tc)
-    })
-
-    atAudioTime(ac, startTime + duration, (mutedTime) => {
-      // stop changes, fully muted
-      gp.cancelScheduledValues(mutedTime)
-      gp.setValueAtTime(0, mutedTime)
-      beeping.value = false
-    })
-  } catch (e) {
-    console.error(e)
-    beeping.value = false
-  }
-
-  function atAudioTime(
-    audioContext: BaseAudioContext,
-    requestedTime: number,
-    fn: (currentTime: number, requestedTime: number) => void
-  ) {
-    const timer = new ConstantSourceNode(audioContext)
-    timer.addEventListener('ended', () => fn(audioContext.currentTime, requestedTime))
-    timer.start(requestedTime - 0.1)
-    timer.stop(requestedTime)
   }
 }
 </script>
@@ -87,8 +43,17 @@ const beep = () => {
   <header>Signal Timer</header>
 
   <main>
-    <button v-if="started" :disabled="beeping" @click="beep">Beep</button>
-    <button @click="startStop">{{ startStopText }}</button>
+    <button @click="startStop" v-text="startStopText"></button>
+    <div v-if="running">
+      <button :disabled="beeping" @click="beep">Beep</button>
+      <input type="number" v-model="frequency" />
+    </div>
+    <SpectrogramHistory
+      v-if="audioContext != null"
+      :running="running"
+      :inputs="noises"
+      :output="audioContext.destination"
+    />
   </main>
 </template>
 
