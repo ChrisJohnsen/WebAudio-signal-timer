@@ -1,4 +1,4 @@
-import { watch, toRef, type MaybeRefOrGetter, ref, type Ref, readonly } from 'vue'
+import { readonly, ref, toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 
 export default function useBeep(
   audioContext: BaseAudioContext,

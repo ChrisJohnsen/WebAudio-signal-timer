@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import useBeep from './composables/useBeep.js'
+import { computed, ref, watch } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
+import useBeep from './composables/useBeep.js'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
