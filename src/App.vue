@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
-import useBeep from './composables/useBeep.js'
+import useBeep from './composables/useBeep'
+import useWhiteNoise from './composables/useWhiteNoise'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 const beeping = ref(false)
 const frequency = ref(440)
+const noiseGain = ref(0.1)
 const noises = ref<AudioNode[]>([])
 
 let audioContext: AudioContext | undefined
@@ -25,7 +27,9 @@ const startStop = () => {
   beep = () => beeper.beep()
   watch(beeper.beeping, (beepersBeeping) => (beeping.value = beepersBeeping))
 
-  noises.value = [beeper.node]
+  const noisy = useWhiteNoise(audioContext, 5, noiseGain)
+
+  noises.value = [beeper.node, noisy.node]
 
   start()
 
@@ -44,6 +48,8 @@ const startStop = () => {
   <main>
     <button @click="startStop" v-text="startStopText"></button>
     <div v-if="running">
+      <input type="number" v-model="noiseGain" min="0" max="1" step="0.05" />
+      <br />
       <button :disabled="beeping" @click="beep">Beep</button>
       <input type="number" v-model="frequency" />
     </div>
