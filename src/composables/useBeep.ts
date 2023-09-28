@@ -40,30 +40,23 @@ function beep(
   return (onDone) => {
     if (beeping.value) return
     try {
-      const startTime = audioContext.currentTime
       const duration = 1
-      const tc = 0.02
-      const rampTime = 5 * tc
+
+      const startTime = audioContext.currentTime
+      const endTime = startTime + duration
+
+      const rampTime = 0.1
+      const rampUpTime = startTime + rampTime
+      const rampDownTime = endTime - rampTime
 
       beeping.value = true
-      // ramp up
-      gp.setTargetAtTime(1, startTime, tc)
 
-      atAudioTime(audioContext, startTime + rampTime, (unmutedTime) => {
-        // stop changes, fully unmuted
-        gp.cancelScheduledValues(unmutedTime)
-        gp.setValueAtTime(1, unmutedTime)
-      })
+      gp.setValueAtTime(0, startTime)
+      gp.linearRampToValueAtTime(1, rampUpTime)
+      gp.setValueAtTime(1, rampDownTime)
+      gp.linearRampToValueAtTime(0, endTime)
 
-      atAudioTime(audioContext, startTime + duration - rampTime, (rampDownTime) => {
-        // ramp down
-        gp.setTargetAtTime(0, rampDownTime, tc)
-      })
-
-      atAudioTime(audioContext, startTime + duration, (mutedTime) => {
-        // stop changes, fully muted
-        gp.cancelScheduledValues(mutedTime)
-        gp.setValueAtTime(0, mutedTime)
+      atAudioTime(audioContext, endTime, () => {
         beeping.value = false
         onDone?.()
       })
