@@ -17,16 +17,15 @@ const startStop = () => {
   if (audioContext) return start()
 
   audioContext = new AudioContext()
-
-  const beeper = useBeep(audioContext, frequency)
-
-  noises.value = [beeper.node]
-  beep = () => beeper.beep()
-  watch(beeper.beeping, (beepersBeeping) => (beeping.value = beepersBeeping))
-
   audioContext.addEventListener('statechange', () => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
+
+  const beeper = useBeep(audioContext, frequency)
+  beep = () => beeper.beep()
+  watch(beeper.beeping, (beepersBeeping) => (beeping.value = beepersBeeping))
+
+  noises.value = [beeper.node]
 
   start()
 
