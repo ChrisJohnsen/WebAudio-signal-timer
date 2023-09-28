@@ -77,7 +77,8 @@ function drawSpectrogram() {
   frequencyData.forEach((power, i) => {
     const binStart = Math.round((width * i) / frequencyData.length)
     const binEnd = Math.round((width * (i + 1)) / frequencyData.length)
-    ctx.fillStyle = `rgb(0,0,${power})`
+    const mappedPower = 1 - Math.log2(256 - power) / 8
+    ctx.fillStyle = `hsl(240deg 100% ${50 * mappedPower}%)`
     ctx.fillRect(binStart, 0, binEnd - binStart, rowHeight)
   })
   requestAnimationFrame(drawSpectrogram)
