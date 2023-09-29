@@ -130,6 +130,6 @@ function updateSpectrogram() {
 
 <style scoped>
 canvas {
-  width: 100vw;
+  width: 100%;
 }
 </style>
