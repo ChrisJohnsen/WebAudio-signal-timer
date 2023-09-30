@@ -1,18 +1,37 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, toRef, watch, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, toRef, watch, watchEffect, type PropType } from 'vue'
 import cubeYF from '../assets/cubeYF'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const headerHeight = 10
 
-const props = withDefaults(
-  defineProps<{
-    running: boolean
-    rowRate?: number // rows per second
-    inputs: AudioNode[]
-    output?: AudioNode
-  }>(),
-  { rowRate: 1 }
-)
+const props = defineProps({
+  decibelRange: {
+    type: Object as PropType<{ min: number; max: number }>,
+    default() {
+      return { min: -100, max: -10 }
+    },
+    validator({ min, max }: { min: number; max: number }) {
+      return -150 <= min && min < max && max <= 0
+    }
+  },
+  running: {
+    type: Boolean,
+    default: true
+  },
+  inputs: {
+    type: Array as PropType<AudioNode[]>,
+    required: true
+  },
+  output: {
+    type: AudioNode
+  },
+  rowRate: {
+    type: Number,
+    default: 1,
+    validator: (rate: number) => rate > 0
+  }
+})
 
 let analyzer: AnalyserNode | undefined
 let sampleIntervalId: number | undefined
@@ -45,9 +64,21 @@ onMounted(() => {
 
   watchEffect(() => {
     const canvas = canvasRef.value
-    if (canvas)
+    if (canvas) {
       // XXX eventually useResizeObserver
       canvas.width = canvas.clientWidth
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      const binCount = 20
+      const binWidth = canvas.width / binCount
+      for (let i = 0; i < binCount; i++) {
+        const binStart = Math.round(binWidth * i)
+        const binEnd = Math.round(binWidth * (i + 1))
+        const [r, g, b] = cubeYF[Math.trunc((256 * i) / binCount)]
+        ctx.fillStyle = `rgb(${r} ${g} ${b})`
+        ctx.fillRect(binStart, 0, binEnd - binStart, headerHeight)
+      }
+    }
   })
 
   watch(
@@ -64,7 +95,10 @@ onMounted(() => {
   )
 
   watchEffect(() => {
-    if (props.rowRate == 0) console.warn('spectrogram row-rate must not be zero')
+    if (analyzer) analyzer.minDecibels = props.decibelRange.min
+  })
+  watchEffect(() => {
+    if (analyzer) analyzer.maxDecibels = props.decibelRange.max
   })
 })
 onUnmounted(() => {
@@ -112,7 +146,17 @@ function updateSpectrogram() {
   const { width, height } = canvas
   const rowHeight = 1
   const binWidth = width / rowData.length
-  ctx.drawImage(canvas, 0, 0, width, height - rowHeight, 0, rowHeight, width, height - rowHeight)
+  ctx.drawImage(
+    canvas,
+    0,
+    headerHeight,
+    width,
+    height - rowHeight - headerHeight,
+    0,
+    headerHeight + rowHeight,
+    width,
+    height - rowHeight - headerHeight
+  )
   try {
     rowData.forEach((power, i) => {
       const binStart = Math.round(binWidth * i)
@@ -121,7 +165,7 @@ function updateSpectrogram() {
       // const [r, g, b] = cubeYF[Math.trunc(255 * mappedPower)]
       const [r, g, b] = cubeYF[power]
       ctx.fillStyle = `rgb(${r} ${g} ${b})`
-      ctx.fillRect(binStart, 0, binEnd - binStart, rowHeight)
+      ctx.fillRect(binStart, headerHeight, binEnd - binStart, rowHeight)
     })
   } finally {
     lastRowTime = Date.now()
