@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, toRef, watch, watchEffect } from 'vue'
+import cubeYF from '../assets/cubeYF'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
@@ -112,15 +113,20 @@ function updateSpectrogram() {
   const rowHeight = 1
   const binWidth = width / rowData.length
   ctx.drawImage(canvas, 0, 0, width, height - rowHeight, 0, rowHeight, width, height - rowHeight)
-  rowData.forEach((power, i) => {
-    const binStart = Math.round(binWidth * i)
-    const binEnd = Math.round(binWidth * (i + 1))
-    const mappedPower = 1 - Math.log2(256 - power) / 8
-    ctx.fillStyle = `hsl(240deg 100% ${50 * mappedPower}%)`
-    ctx.fillRect(binStart, 0, binEnd - binStart, rowHeight)
-    rowData[i] = 0
-  })
-  lastRowTime = Date.now()
+  try {
+    rowData.forEach((power, i) => {
+      const binStart = Math.round(binWidth * i)
+      const binEnd = Math.round(binWidth * (i + 1))
+      // const mappedPower = 1 - Math.log2(256 - power) / 8
+      // const [r, g, b] = cubeYF[Math.trunc(255 * mappedPower)]
+      const [r, g, b] = cubeYF[power]
+      ctx.fillStyle = `rgb(${r} ${g} ${b})`
+      ctx.fillRect(binStart, 0, binEnd - binStart, rowHeight)
+    })
+  } finally {
+    lastRowTime = Date.now()
+    rowData.fill(0)
+  }
 }
 </script>
 
