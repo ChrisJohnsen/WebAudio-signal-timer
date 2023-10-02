@@ -64,20 +64,34 @@ onMounted(() => {
 
   watchEffect(() => {
     const canvas = canvasRef.value
-    if (canvas) {
-      // XXX eventually useResizeObserver
-      canvas.width = canvas.clientWidth
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      const binCount = 20
-      const binWidth = canvas.width / binCount
-      for (let i = 0; i < binCount; i++) {
-        const binStart = Math.round(binWidth * i)
-        const binEnd = Math.round(binWidth * (i + 1))
-        const [r, g, b] = cubeYF[Math.trunc((256 * i) / binCount)]
-        ctx.fillStyle = `rgb(${r} ${g} ${b})`
-        ctx.fillRect(binStart, 0, binEnd - binStart, headerHeight)
-      }
+    if (!canvas) return
+
+    // XXX eventually useResizeObserver
+    canvas.width = canvas.clientWidth
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const binCount = cubeYF.length
+    const binWidth = canvas.width / binCount
+    for (let i = 0; i < binCount; i++) {
+      const binStart = Math.round(binWidth * i)
+      const binEnd = Math.round(binWidth * (i + 1))
+      const [r, g, b] = cubeYF[Math.trunc((256 * i) / binCount)]
+      ctx.fillStyle = `rgb(${r} ${g} ${b})`
+      ctx.fillRect(binStart, 0, binEnd - binStart, headerHeight)
+    }
+
+    const minFrequency = 0
+    const maxFrequency = a.context.sampleRate / 2
+    const markerInterval = 1000
+    const labelWidth = Math.trunc((canvas.width * markerInterval) / maxFrequency) - 3
+    ctx.fillStyle = 'black'
+    ctx.font = `${headerHeight}px sans-serif`
+    ctx.textBaseline = 'bottom'
+    for (let i = 0; i * markerInterval <= maxFrequency; i++) {
+      const frequency = minFrequency + i * markerInterval
+      const labelPosition = Math.trunc((canvas.width * frequency) / maxFrequency)
+      ctx.fillRect(labelPosition, 0, 1, headerHeight)
+      ctx.fillText(`${(frequency / 1000).toFixed(1)}`, labelPosition + 2, headerHeight, labelWidth)
     }
   })
 
