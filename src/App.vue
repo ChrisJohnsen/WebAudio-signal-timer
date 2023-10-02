@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import useBeep from './composables/useBeep'
 import useWhiteNoise from './composables/useWhiteNoise'
@@ -10,8 +10,7 @@ const beeping = ref(false)
 const frequency = ref(440)
 const noiseGain = ref(0.1)
 const noises = ref<AudioNode[]>([])
-const minDecibels = ref(-80)
-const maxDecibels = ref(0)
+const dbRange = reactive({ min: -80, max: 0 })
 
 let audioContext: AudioContext | undefined
 let beep: (ev: Event) => void = () => {} // replaced when beeper is created after user interaction required for Web Audio
@@ -62,24 +61,24 @@ const startStop = () => {
         id="min-db"
         type="number"
         min="-150"
-        :max="maxDecibels - 10"
+        :max="dbRange.max - 10"
         step="10"
-        v-model="minDecibels"
+        v-model="dbRange.min"
       />
       <br />
       <label for="max-db">Maximum dB</label
       ><input
         id="max-db"
         type="number"
-        :min="minDecibels + 10"
+        :min="dbRange.min + 10"
         max="0"
         step="10"
-        v-model="maxDecibels"
+        v-model="dbRange.max"
       />
     </div>
     <SpectrogramHistory
       v-if="audioContext != null"
-      :decibel-range="{ min: minDecibels, max: maxDecibels }"
+      :decibel-range="dbRange"
       :running="running"
       :inputs="noises"
       :output="audioContext.destination"
