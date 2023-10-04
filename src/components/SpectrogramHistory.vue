@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCssVar } from '@vueuse/core'
+import { useCssVar, useResizeObserver } from '@vueuse/core'
 import {
   computed,
   onMounted,
@@ -98,86 +98,17 @@ onMounted(() => {
     { immediate: true }
   )
 
+  useResizeObserver(canvasRef, (entries) => {
+    const canvas = entries[0].target
+    if (!(canvas instanceof HTMLCanvasElement)) return
+    canvas.width = entries[0].contentRect.width
+    drawLegend(canvas)
+  })
+
   watchEffect(() => {
     const canvas = canvasRef.value
     if (!canvas) return
-
-    // XXX eventually useResizeObserver
-    canvas.width = canvas.clientWidth
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // power legend
-    const powerLegendTop = 0
-    const binCount = 256
-    const binWidth = canvas.width / binCount
-    for (let i = 0; i < binCount; i++) {
-      const binStart = Math.round(binWidth * i)
-      const binEnd = Math.round(binWidth * (i + 1))
-      ctx.fillStyle = cubeYfColor(Math.trunc((256 * i) / binCount))
-      ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
-    }
-    props.decibelRange.max - props.decibelRange.min
-    ctx.fillStyle = textColor.value
-    ctx.font = `${frequencyLabelsHeight}px sans-serif`
-    drawLabels(
-      ctx,
-      powerLegendTop,
-      powerLegendHeight - 4,
-      props.decibelRange.min,
-      props.decibelRange.max,
-      (power: number, span: number) =>
-        span >= 1 ? `${Math.round(power)}dB` : `${power.toFixed(2)}dB`
-    )
-
-    // separator
-    ctx.fillStyle = 'grey'
-    ctx.fillRect(0, powerLegendTop + powerLegendHeight - 4, canvas.width, 4)
-
-    // frequency labels
-    const frequencyLabelsTop = powerLegendHeight
-    ctx.fillStyle = bgColor.value
-    ctx.fillRect(0, frequencyLabelsTop, canvas.width, frequencyLabelsHeight)
-    ctx.fillStyle = textColor.value
-    ctx.font = `${frequencyLabelsHeight}px sans-serif`
-    drawLabels(
-      ctx,
-      frequencyLabelsTop,
-      frequencyLabelsHeight,
-      frequencies.value.minFrequency,
-      frequencies.value.maxFrequency,
-      (frequency: number, labelBandwidth: number) =>
-        labelBandwidth >= 1 ? `${Math.round(frequency)}` : `${frequency.toFixed(2)}`
-    )
-
-    function drawLabels(
-      ctx: CanvasRenderingContext2D,
-      y: number,
-      height: number,
-      min: number,
-      max: number,
-      label: (value: number, span: number) => string
-    ) {
-      const range = max - min
-      const span = markerSpan(range)
-      const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
-      ctx.textBaseline = 'bottom'
-      const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
-      const pos = drawPosition(ctx.canvas.width, min, range)
-      for (let value = firstValue; value <= max; value += span) {
-        const labelPosition = pos(value)
-        ctx.fillRect(labelPosition, y, 1, height)
-        ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
-      }
-
-      function markerSpan(range: number) {
-        const base = 10 ** Math.trunc(Math.log10(range))
-        const factor = range / base
-        if (factor >= 5) return 0.5 * base
-        else if (factor >= 2) return 0.2 * base
-        else return 0.1 * base
-      }
-    }
+    drawLegend(canvas)
   })
 
   watch(
@@ -212,6 +143,83 @@ onUnmounted(() => {
 
   analyzer.value = undefined
 })
+
+function drawLegend(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // power legend
+  const powerLegendTop = 0
+  const binCount = 256
+  const binWidth = canvas.width / binCount
+  for (let i = 0; i < binCount; i++) {
+    const binStart = Math.round(binWidth * i)
+    const binEnd = Math.round(binWidth * (i + 1))
+    ctx.fillStyle = cubeYfColor(Math.trunc((256 * i) / binCount))
+    ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
+  }
+  props.decibelRange.max - props.decibelRange.min
+  ctx.fillStyle = textColor.value
+  ctx.font = `${frequencyLabelsHeight}px sans-serif`
+  drawLabels(
+    ctx,
+    powerLegendTop,
+    powerLegendHeight - 4,
+    props.decibelRange.min,
+    props.decibelRange.max,
+    (power: number, span: number) =>
+      span >= 1 ? `${Math.round(power)}dB` : `${power.toFixed(2)}dB`
+  )
+
+  // separator
+  ctx.fillStyle = 'grey'
+  ctx.fillRect(0, powerLegendTop + powerLegendHeight - 4, canvas.width, 4)
+
+  // frequency labels
+  const frequencyLabelsTop = powerLegendHeight
+  ctx.fillStyle = bgColor.value
+  ctx.fillRect(0, frequencyLabelsTop, canvas.width, frequencyLabelsHeight)
+  ctx.fillStyle = textColor.value
+  ctx.font = `${frequencyLabelsHeight}px sans-serif`
+  drawLabels(
+    ctx,
+    frequencyLabelsTop,
+    frequencyLabelsHeight,
+    frequencies.value.minFrequency,
+    frequencies.value.maxFrequency,
+    (frequency: number, labelBandwidth: number) =>
+      labelBandwidth >= 1 ? `${Math.round(frequency)}` : `${frequency.toFixed(2)}`
+  )
+
+  function drawLabels(
+    ctx: CanvasRenderingContext2D,
+    y: number,
+    height: number,
+    min: number,
+    max: number,
+    label: (value: number, span: number) => string
+  ) {
+    const range = max - min
+    const span = markerSpan(range)
+    const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
+    ctx.textBaseline = 'bottom'
+    const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
+    const pos = drawPosition(ctx.canvas.width, min, range)
+    for (let value = firstValue; value <= max; value += span) {
+      const labelPosition = pos(value)
+      ctx.fillRect(labelPosition, y, 1, height)
+      ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
+    }
+
+    function markerSpan(range: number) {
+      const base = 10 ** Math.trunc(Math.log10(range))
+      const factor = range / base
+      if (factor >= 5) return 0.5 * base
+      else if (factor >= 2) return 0.2 * base
+      else return 0.1 * base
+    }
+  }
+}
 
 let lastRowTime = 0
 let rowData = new Uint8Array(0)
