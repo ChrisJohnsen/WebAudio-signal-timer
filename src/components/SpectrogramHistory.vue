@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCssVar } from '@vueuse/core'
 import {
   computed,
   onMounted,
@@ -14,7 +15,13 @@ import {
 import { cubeYfColor } from '../assets/cubeYF'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const headerHeight = 10
+const powerLegendHeight = 14 // includes separator
+const frequencyLabelsHeight = 10
+const headerHeight = powerLegendHeight + frequencyLabelsHeight
+
+// CSS "variables" XXX eventually react to dark mode, too
+const bgColor = useCssVar('--bg-color', document.body)
+const textColor = useCssVar('--text-color', document.body)
 
 const props = defineProps({
   decibelRange: {
@@ -61,10 +68,6 @@ const frequencies = computed(() => {
   const maxFrequency = Math.min(props.band.high, nyquistFrequency)
   return { minFrequency, maxFrequency, bandWidth: maxFrequency - minFrequency }
 })
-function frequencyPosition(canvasWidth: number, frequency: number) {
-  const { minFrequency, bandWidth } = frequencies.value
-  return Math.trunc((canvasWidth * (frequency - minFrequency)) / bandWidth)
-}
 
 const analyzer: ShallowRef<AnalyserNode | undefined> = shallowRef()
 let sampleIntervalId: number | undefined
@@ -103,33 +106,77 @@ onMounted(() => {
     canvas.width = canvas.clientWidth
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    // power legend
+    const powerLegendTop = 0
     const binCount = 256
     const binWidth = canvas.width / binCount
     for (let i = 0; i < binCount; i++) {
       const binStart = Math.round(binWidth * i)
       const binEnd = Math.round(binWidth * (i + 1))
       ctx.fillStyle = cubeYfColor(Math.trunc((256 * i) / binCount))
-      ctx.fillRect(binStart, 0, binEnd - binStart, headerHeight)
+      ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
     }
+    props.decibelRange.max - props.decibelRange.min
+    ctx.fillStyle = textColor.value
+    ctx.font = `${frequencyLabelsHeight}px sans-serif`
+    drawLabels(
+      ctx,
+      powerLegendTop,
+      powerLegendHeight - 4,
+      props.decibelRange.min,
+      props.decibelRange.max,
+      (power: number, span: number) =>
+        span >= 1 ? `${Math.round(power)}dB` : `${power.toFixed(2)}dB`
+    )
 
-    const { minFrequency, maxFrequency, bandWidth } = frequencies.value
-    const markerBand = ((base) => {
-      const factor = bandWidth / base
-      if (factor >= 5) return 0.5 * base
-      else if (factor >= 2) return 0.2 * base
-      else return 0.1 * base
-    })(10 ** Math.trunc(Math.log10(bandWidth)))
-    const labelWidth = Math.trunc((canvas.width * markerBand) / bandWidth) - 3
-    const label = (frequency: number) =>
-      markerBand >= 1 ? `${Math.round(frequency)}` : `${frequency.toFixed(2)}`
-    ctx.fillStyle = 'black'
-    ctx.font = `${headerHeight}px sans-serif`
-    ctx.textBaseline = 'bottom'
-    const firstMarker = Math.ceil(minFrequency / markerBand) * markerBand // round minFrequency up to multiple of markerBand
-    for (let frequency = firstMarker; frequency <= maxFrequency; frequency += markerBand) {
-      const labelPosition = frequencyPosition(canvas.width, frequency)
-      ctx.fillRect(labelPosition, 0, 1, headerHeight)
-      ctx.fillText(`${label(frequency)}`, labelPosition + 2, headerHeight, labelWidth)
+    // separator
+    ctx.fillStyle = 'grey'
+    ctx.fillRect(0, powerLegendTop + powerLegendHeight - 4, canvas.width, 4)
+
+    // frequency labels
+    const frequencyLabelsTop = powerLegendHeight
+    ctx.fillStyle = bgColor.value
+    ctx.fillRect(0, frequencyLabelsTop, canvas.width, frequencyLabelsHeight)
+    ctx.fillStyle = textColor.value
+    ctx.font = `${frequencyLabelsHeight}px sans-serif`
+    drawLabels(
+      ctx,
+      frequencyLabelsTop,
+      frequencyLabelsHeight,
+      frequencies.value.minFrequency,
+      frequencies.value.maxFrequency,
+      (frequency: number, labelBandwidth: number) =>
+        labelBandwidth >= 1 ? `${Math.round(frequency)}` : `${frequency.toFixed(2)}`
+    )
+
+    function drawLabels(
+      ctx: CanvasRenderingContext2D,
+      y: number,
+      height: number,
+      min: number,
+      max: number,
+      label: (value: number, span: number) => string
+    ) {
+      const range = max - min
+      const span = markerSpan(range)
+      const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
+      ctx.textBaseline = 'bottom'
+      const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
+      const pos = drawPosition(ctx.canvas.width, min, range)
+      for (let value = firstValue; value <= max; value += span) {
+        const labelPosition = pos(value)
+        ctx.fillRect(labelPosition, y, 1, height)
+        ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
+      }
+
+      function markerSpan(range: number) {
+        const base = 10 ** Math.trunc(Math.log10(range))
+        const factor = range / base
+        if (factor >= 5) return 0.5 * base
+        else if (factor >= 2) return 0.2 * base
+        else return 0.1 * base
+      }
     }
   })
 
@@ -214,10 +261,15 @@ function updateSpectrogram() {
     const binBandwidth = analyzer.value.context.sampleRate / 2 / rowData.length
     let infra = -Infinity
     let ultra = -Infinity
+    const pos = drawPosition(
+      canvas.width,
+      frequencies.value.minFrequency,
+      frequencies.value.bandWidth
+    )
     for (let i = 0; i < rowData.length; i++) {
       const power = rowData[i]
-      const binStart = frequencyPosition(canvas.width, i * binBandwidth)
-      const binEnd = frequencyPosition(canvas.width, (i + 1) * binBandwidth)
+      const binStart = pos(i * binBandwidth)
+      const binEnd = pos((i + 1) * binBandwidth)
       if (binEnd < oobWidth) {
         infra = Math.max(infra, power)
         continue
@@ -242,6 +294,14 @@ function updateSpectrogram() {
     lastRowTime = Date.now()
     rowData.fill(0)
   }
+}
+
+function drawPosition(
+  drawWidth: number,
+  minValue: number,
+  valuesExtent: number
+): (value: number) => number {
+  return (value) => Math.trunc((drawWidth * (value - minValue)) / valuesExtent)
 }
 </script>
 
