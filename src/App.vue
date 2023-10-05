@@ -10,6 +10,7 @@ const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audi
 const snr = ref(20)
 const gain = ref(1)
 const frequency = ref(440)
+const duration = ref(1)
 const period = ref(5)
 const noises = ref<AudioNode[]>([])
 
@@ -39,7 +40,7 @@ const startStop = () => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
 
-  const periodic = useNoisyPeriodicBeep(audioContext, snr, { frequency, period }, gain)
+  const periodic = useNoisyPeriodicBeep(audioContext, snr, { frequency, duration, period }, gain)
   periodicPauser = periodic.pause
 
   noises.value = [periodic.node]
@@ -71,6 +72,10 @@ const startStop = () => {
       <div>
         <label for="beep-frequency">Beep Frequency (Hz):</label
         ><input id="beep-frequency" type="number" v-model="frequency" min="1" />
+      </div>
+      <div>
+        <label for="beep-duration">Beep Duration (s):</label
+        ><input id="beep-duration" type="number" v-model="duration" min="0" :max="period" />
       </div>
       <div>
         <label for="beep-period">Beep Period (s):</label

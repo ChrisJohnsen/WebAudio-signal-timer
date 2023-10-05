@@ -6,7 +6,7 @@ export default function useBeep(
 ): {
   node: AudioNode
   beeping: Readonly<Ref<boolean>>
-  beep: (onDone?: () => void) => void
+  beep: (duration?: number, onDone?: () => void) => void
 } {
   const frequencyRef = toRef(frequency)
   const oscillator = new OscillatorNode(audioContext, {
@@ -36,16 +36,19 @@ function beep(
   audioContext: BaseAudioContext,
   gp: AudioParam,
   beeping: Ref<boolean>
-): (onDone?: () => void) => void {
-  return (onDone) => {
+): (duration?: number, onDone?: () => void) => void {
+  return (duration = 1, onDone) => {
     if (beeping.value) return
     try {
-      const duration = 1
+      const rampTime = 0.1
+      if (duration < 2 * rampTime) {
+        duration = rampTime * 2
+        console.warn(`too-short beep duration extended to ${duration}`)
+      }
 
       const startTime = audioContext.currentTime
       const endTime = startTime + duration
 
-      const rampTime = 0.1
       const rampUpTime = startTime + rampTime
       const rampDownTime = endTime - rampTime
 

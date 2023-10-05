@@ -1,12 +1,16 @@
 import { useIntervalFn, type Pausable } from '@vueuse/core'
-import { computed, toRef, watch, type MaybeRefOrGetter } from 'vue'
+import { computed, toRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import useBeep from './useBeep'
 import useWhiteNoise from './useWhiteNoise'
 
 export default function useNoisyPeriodicBeep(
   audioContext: BaseAudioContext,
   snr: MaybeRefOrGetter<number>,
-  beep: { frequency: MaybeRefOrGetter<number>; period: MaybeRefOrGetter<number> },
+  beep: {
+    frequency: MaybeRefOrGetter<number>
+    duration: MaybeRefOrGetter<number>
+    period: MaybeRefOrGetter<number>
+  },
   gain: MaybeRefOrGetter<number> = 1
 ): {
   pause: Pausable
@@ -29,7 +33,7 @@ export default function useNoisyPeriodicBeep(
   beeper.node.connect(gainNode)
 
   const pause = useIntervalFn(
-    () => beeper.beep(),
+    () => beeper.beep(toValue(beep.duration)),
     computed(() => 1000 * toRef(beep.period).value),
     { immediate: true }
   )
