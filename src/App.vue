@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import type { Pausable } from '@vueuse/core'
+import { computed, reactive, ref } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
-import useBeep from './composables/useBeep'
-import useWhiteNoise from './composables/useWhiteNoise'
+import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 
-const beeping = ref(false)
+const snr = ref(20)
+const gain = ref(1)
 const frequency = ref(440)
-const noiseGain = ref(0.1)
+const period = ref(5)
 const noises = ref<AudioNode[]>([])
 
 const dbRange = reactive({ min: -80, max: 0 })
@@ -27,7 +28,7 @@ const bandHighEmptyForInfinite = computed<number | string>({
 })
 
 let audioContext: AudioContext | undefined
-let beep: (ev: Event) => void = () => {} // replaced when beeper is created after user interaction required for Web Audio
+let periodicPauser: Pausable | undefined
 
 const startStop = () => {
   if (running.value) return stop()
@@ -38,20 +39,19 @@ const startStop = () => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
 
-  const beeper = useBeep(audioContext, frequency)
-  beep = () => beeper.beep()
-  watch(beeper.beeping, (beepersBeeping) => (beeping.value = beepersBeeping))
+  const periodic = useNoisyPeriodicBeep(audioContext, snr, { frequency, period }, gain)
+  periodicPauser = periodic.pause
 
-  const noisy = useWhiteNoise(audioContext, 5, noiseGain)
-
-  noises.value = [beeper.node, noisy.node]
+  noises.value = [periodic.node]
 
   start()
 
   function start() {
     audioContext?.resume()
+    periodicPauser?.resume()
   }
   function stop() {
+    periodicPauser?.pause()
     audioContext?.suspend()
   }
 }
@@ -65,13 +65,20 @@ const startStop = () => {
     <fieldset v-if="running">
       <legend>Demo Sounds</legend>
       <div>
-        <label for="noise-gain">Noise Gain</label
-        ><input id="noise-gain" type="number" v-model="noiseGain" min="0" max="1" step="0.05" />
+        <label for="demo-gain">Gain</label
+        ><input id="demo-gain" type="number" v-model="gain" min="0" />
       </div>
       <div>
-        <button :disabled="beeping" @click="beep">Beep</button>
-        <label for="beep-frequency">Beep Frequency:</label
-        ><input id="beep-frequency" type="number" v-model="frequency" />
+        <label for="beep-frequency">Beep Frequency (Hz):</label
+        ><input id="beep-frequency" type="number" v-model="frequency" min="1" />
+      </div>
+      <div>
+        <label for="beep-period">Beep Period (s):</label
+        ><input id="beep-period" type="number" v-model="period" min="1" />
+      </div>
+      <div>
+        <label for="beep-snr">Beep SNR:</label
+        ><input id="beep-snr" type="number" v-model="snr" min="0" />
       </div>
     </fieldset>
     <fieldset>
