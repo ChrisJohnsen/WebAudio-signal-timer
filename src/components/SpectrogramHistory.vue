@@ -1,17 +1,6 @@
 <script setup lang="ts">
 import { useCssVar, useResizeObserver } from '@vueuse/core'
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  shallowRef,
-  toRef,
-  watch,
-  watchEffect,
-  type PropType,
-  type ShallowRef
-} from 'vue'
+import { computed, onMounted, ref, watchEffect, type PropType } from 'vue'
 import { cubeYfColor } from '../assets/cubeYF'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -42,61 +31,26 @@ const props = defineProps({
       return 0 <= low && low < high
     }
   },
-  running: {
-    type: Boolean,
-    default: true
-  },
-  inputs: {
-    type: Array as PropType<AudioNode[]>,
+  sampleRate: {
+    type: Number,
     required: true
   },
-  output: {
-    type: AudioNode
-  },
-  rowRate: {
-    type: Number,
-    default: 1,
-    validator: (rate: number) => rate > 0
+  data: {
+    type: Float32Array,
+    required: true
   }
 })
 
 const frequencies = computed(() => {
-  const sampleRate = analyzer.value?.context.sampleRate
   // spell-checker: words Nyquist
-  const nyquistFrequency = sampleRate ? sampleRate / 2 : 24000
+  const nyquistFrequency = props.sampleRate / 2
   const minFrequency = props.band.low
   const maxFrequency = Math.min(props.band.high, nyquistFrequency)
   return { minFrequency, maxFrequency, bandWidth: maxFrequency - minFrequency }
 })
 
-const analyzer: ShallowRef<AnalyserNode | undefined> = shallowRef()
-let sampleIntervalId: number | undefined
-const samplePeriod = 100 // ms
-
 onMounted(() => {
-  const a = new AnalyserNode(props.inputs[0].context, { fftSize: 512, smoothingTimeConstant: 0 })
-  analyzer.value = a
-
-  watch(
-    toRef(props, 'inputs'),
-    (newInputs, oldInputs) => {
-      newInputs.forEach((input) => input.connect(a))
-      const newInputsSet = new Set(newInputs)
-      if (oldInputs)
-        oldInputs.forEach((input) => {
-          if (!newInputsSet.has(input)) input.disconnect(a)
-        })
-    },
-    { immediate: true }
-  )
-  watch(
-    toRef(props, 'output'),
-    (newOutput, oldOutput) => {
-      if (newOutput) a.connect(newOutput)
-      if (oldOutput && oldOutput != newOutput) a.disconnect(oldOutput)
-    },
-    { immediate: true }
-  )
+  watchEffect(() => updateSpectrogram(props.sampleRate, props.data))
 
   useResizeObserver(canvasRef, (entries) => {
     const canvas = entries[0].target
@@ -110,38 +64,6 @@ onMounted(() => {
     if (!canvas) return
     drawLegend(canvas)
   })
-
-  watch(
-    toRef(props, 'running'),
-    (newRunning, oldRunning) => {
-      if (sampleIntervalId != null) {
-        clearInterval(sampleIntervalId)
-        sampleIntervalId = undefined
-      }
-      if (!newRunning) return
-      if (!oldRunning) sampleIntervalId = setInterval(gatherFrequencyData, samplePeriod)
-    },
-    { immediate: true }
-  )
-
-  watchEffect(() => {
-    a.minDecibels = props.decibelRange.min
-  })
-  watchEffect(() => {
-    a.maxDecibels = props.decibelRange.max
-  })
-})
-onUnmounted(() => {
-  if (sampleIntervalId != null) clearInterval(sampleIntervalId)
-  sampleIntervalId = undefined
-
-  if (!analyzer.value) return
-
-  const a = analyzer.value
-  if (props.output) a.disconnect(props.output)
-  props.inputs.forEach((input) => input.disconnect(a))
-
-  analyzer.value = undefined
 })
 
 function drawLegend(canvas: HTMLCanvasElement) {
@@ -221,31 +143,8 @@ function drawLegend(canvas: HTMLCanvasElement) {
   }
 }
 
-let lastRowTime = 0
-let rowData = new Uint8Array(0)
-let frequencyData = new Uint8Array(0)
-
-function gatherFrequencyData() {
-  if (!props.running || !analyzer.value) return
-  const a = analyzer.value
-
-  if (frequencyData.length != a.frequencyBinCount)
-    frequencyData = new Uint8Array(a.frequencyBinCount)
-  a.getByteFrequencyData(frequencyData)
-
-  if (rowData.length != frequencyData.length) rowData = new Uint8Array(frequencyData.length)
-  for (let i = 0; i < frequencyData.length; i++) rowData[i] = Math.max(rowData[i], frequencyData[i])
-  // simple averaging drastically reduces the overall signal if the signal is not present for most of the samples that go into a row
-  // also, this accumulation needs a wider data type in rowData
-  // for (let i = 0; i < frequencyData.length; i++) rowData[i] += frequencyData[i]
-  // rowSamples++
-
-  if (props.rowRate != 0 && Date.now() - lastRowTime > 1000 / props.rowRate)
-    requestAnimationFrame(updateSpectrogram)
-}
-
-function updateSpectrogram() {
-  if (!props.running || !canvasRef.value || !analyzer.value) return
+function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
+  if (!canvasRef.value) return
 
   const canvas = canvasRef.value
   const ctx = canvas.getContext('2d')
@@ -264,43 +163,41 @@ function updateSpectrogram() {
     width,
     height - rowHeight - headerHeight
   )
-  try {
-    const oobWidth = 4
-    const binBandwidth = analyzer.value.context.sampleRate / 2 / rowData.length
-    let infra = -Infinity
-    let ultra = -Infinity
-    const pos = drawPosition(
-      canvas.width,
-      frequencies.value.minFrequency,
-      frequencies.value.bandWidth
-    )
-    for (let i = 0; i < rowData.length; i++) {
-      const power = rowData[i]
-      const binStart = pos(i * binBandwidth)
-      const binEnd = pos((i + 1) * binBandwidth)
-      if (binEnd < oobWidth) {
-        infra = Math.max(infra, power)
-        continue
-      } else if (binStart > width - oobWidth) {
-        ultra = Math.max(ultra, power)
-        continue
-      }
-      // const mappedPower = 1 - Math.log2(256 - power) / 8
-      // ctx.fillStyle = cubeYfColor(Math.trunc(255 * mappedPower))
-      ctx.fillStyle = cubeYfColor(power)
-      ctx.fillRect(binStart, headerHeight, binEnd - binStart, rowHeight)
+  const oobWidth = 4
+  const binBandwidth = sampleRate / 2 / rowData.length
+  let infra = -Infinity
+  let ultra = -Infinity
+  const pos = drawPosition(
+    canvas.width,
+    frequencies.value.minFrequency,
+    frequencies.value.bandWidth
+  )
+  const dbMin = props.decibelRange.min
+  const dbRange = props.decibelRange.max - props.decibelRange.min
+  const dbIndex = (power: number) => {
+    return Math.trunc((Math.min(dbRange, Math.max(0, power - dbMin)) / dbRange) * 255)
+  }
+  for (let i = 0; i < rowData.length; i++) {
+    const power = rowData[i]
+    const binStart = pos(i * binBandwidth)
+    const binEnd = pos((i + 1) * binBandwidth)
+    if (binEnd < oobWidth) {
+      infra = Math.max(infra, power)
+      continue
+    } else if (binStart > width - oobWidth) {
+      ultra = Math.max(ultra, power)
+      continue
     }
-    if (isFinite(infra)) {
-      ctx.fillStyle = cubeYfColor(infra)
-      ctx.fillRect(0, headerHeight, oobWidth, rowHeight)
-    }
-    if (isFinite(ultra)) {
-      ctx.fillStyle = cubeYfColor(ultra)
-      ctx.fillRect(width - oobWidth, headerHeight, oobWidth, rowHeight)
-    }
-  } finally {
-    lastRowTime = Date.now()
-    rowData.fill(0)
+    ctx.fillStyle = cubeYfColor(dbIndex(power))
+    ctx.fillRect(binStart, headerHeight, binEnd - binStart, rowHeight)
+  }
+  if (isFinite(infra)) {
+    ctx.fillStyle = cubeYfColor(dbIndex(infra))
+    ctx.fillRect(0, headerHeight, oobWidth, rowHeight)
+  }
+  if (isFinite(ultra)) {
+    ctx.fillStyle = cubeYfColor(dbIndex(ultra))
+    ctx.fillRect(width - oobWidth, headerHeight, oobWidth, rowHeight)
   }
 }
 

@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import type { Pausable } from '@vueuse/core'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watchEffect, type Ref } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
+import useAnalyser from './composables/useAnalyser'
 import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 
+// test audio settings
 const snr = ref(20)
 const gain = ref(1)
 const frequency = ref(440)
 const duration = ref(1)
 const period = ref(5)
-const noises = ref<AudioNode[]>([])
 
+// analyser output
+const sampleRate = ref(48000)
+const frequencyData: Ref<Float32Array> = ref(new Float32Array())
+
+// spectrogram inputs
 const dbRange = reactive({ min: -80, max: 0 })
 const band = reactive({ low: 0, high: Infinity })
 const bandHighEmptyForInfinite = computed<number | string>({
@@ -43,7 +49,13 @@ const startStop = () => {
   const periodic = useNoisyPeriodicBeep(audioContext, snr, { frequency, duration, period }, gain)
   periodicPauser = periodic.pause
 
-  noises.value = [periodic.node]
+  const noises = [periodic.node]
+
+  for (const noise of noises) noise.connect(audioContext.destination)
+
+  const analyser = useAnalyser(noises, 1) // XXX make publish period adjustable?
+  watchEffect(() => (sampleRate.value = analyser.sampleRate.value))
+  watchEffect(() => (frequencyData.value = analyser.data.value))
 
   start()
 
@@ -116,9 +128,8 @@ const startStop = () => {
       v-if="audioContext != null"
       :decibel-range="dbRange"
       :band="band"
-      :running="running"
-      :inputs="noises"
-      :output="audioContext.destination"
+      :sample-rate="sampleRate"
+      :data="frequencyData"
     />
   </main>
 </template>
