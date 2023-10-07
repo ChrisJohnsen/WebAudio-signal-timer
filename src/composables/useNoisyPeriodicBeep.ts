@@ -18,10 +18,17 @@ export default function useNoisyPeriodicBeep(
   gainParam: AudioParam
 } {
   const snrRef = toRef(snr)
+  // SNR is power/power, which is also (amplitude/amplitude)^2
+  // SNR = P_sig/P_noise = (A_sig/A_noise)^2
+  // SNR_dB = 10*log10(SNR)
+  // A_sig = 1
+  // SNR = A_noise^(-2)
+  // A_noise = SNR^(-1/2)
+  // A_noise = 10^(-SNR_dB/20)
   const noise = useWhiteNoise(
     audioContext,
     5,
-    computed(() => 1 / snrRef.value)
+    computed(() => snrRef.value ** -0.5)
   )
   const beeper = useBeep(audioContext, beep.frequency)
 

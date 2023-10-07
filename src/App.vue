@@ -9,7 +9,7 @@ const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 
 // test audio settings
-const snr = ref(20)
+const snr = ref(400)
 const gain = ref(1)
 const frequency = ref(440)
 const duration = ref(1)
@@ -94,7 +94,7 @@ const startStop = () => {
         ><input id="beep-period" type="number" v-model="period" min="1" />
       </div>
       <div>
-        <label for="beep-snr">Beep SNR:</label
+        <label for="beep-snr">Beep SNR (power-to-power; plain, not dB):</label
         ><input id="beep-snr" type="number" v-model="snr" min="0" />
       </div>
     </fieldset>
