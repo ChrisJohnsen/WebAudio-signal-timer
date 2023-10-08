@@ -24,9 +24,10 @@ export function whiteNoiseNode(audioContext: BaseAudioContext, duration: number)
 
 export function whiteNoiseBuffer(length: number, sampleRate: number) {
   const buffer = new AudioBuffer({ sampleRate, length, numberOfChannels: 1 })
+  const gain = 10 ** ((28 - 13) / 20) // [-1,1] random seems to give a signal with -28dB (power), so apply gain to put it up near -13dB (where our full-amplitude beep signal lands)
   const data = buffer.getChannelData(0)
   for (let i = 0; i < data.length; i++) {
-    data[i] = Math.random() * 2 - 1
+    data[i] = (Math.random() * 2 - 1) * gain
   }
   return buffer
 }

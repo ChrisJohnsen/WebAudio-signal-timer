@@ -5,7 +5,7 @@ import useWhiteNoise from './useWhiteNoise'
 
 export default function useNoisyPeriodicBeep(
   audioContext: BaseAudioContext,
-  snr: MaybeRefOrGetter<number>,
+  snr_dB: MaybeRefOrGetter<number>,
   beep: {
     frequency: MaybeRefOrGetter<number>
     duration: MaybeRefOrGetter<number>
@@ -17,7 +17,7 @@ export default function useNoisyPeriodicBeep(
   node: AudioNode
   gainParam: AudioParam
 } {
-  const snrRef = toRef(snr)
+  const snr_dB_ref = toRef(snr_dB)
   // SNR is power/power, which is also (amplitude/amplitude)^2
   // SNR = P_sig/P_noise = (A_sig/A_noise)^2
   // SNR_dB = 10*log10(SNR)
@@ -28,7 +28,7 @@ export default function useNoisyPeriodicBeep(
   const noise = useWhiteNoise(
     audioContext,
     5,
-    computed(() => snrRef.value ** -0.5)
+    computed(() => 10 ** (-snr_dB_ref.value / 20))
   )
   const beeper = useBeep(audioContext, beep.frequency)
 
