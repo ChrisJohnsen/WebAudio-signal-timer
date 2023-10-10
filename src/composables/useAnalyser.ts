@@ -15,7 +15,11 @@ import {
 export default function useAnalyser(
   inputs: MaybeRefOrGetter<AudioNode[]>,
   publishPeriod: MaybeRefOrGetter<number>
-): { sampleRate: Readonly<Ref<number>>; data: DeepReadonly<ShallowRef<Float32Array>> } {
+): {
+  sampleRate: Readonly<Ref<number>>
+  frequencyBinCount: Readonly<Ref<number>>
+  data: DeepReadonly<ShallowRef<Float32Array>>
+} {
   const inputsRef = toRef(inputs)
   const publishPeriodRef = toRef(publishPeriod)
   const sampleRateRef = ref(48000)
@@ -69,7 +73,11 @@ export default function useAnalyser(
     { immediate: true }
   )
 
-  return { sampleRate: shallowReadonly(sampleRateRef), data: readonly(publishedArrayRef) }
+  return {
+    sampleRate: shallowReadonly(sampleRateRef),
+    frequencyBinCount: shallowReadonly(ref(length)),
+    data: readonly(publishedArrayRef)
+  }
 
   function getAnalyser(audioContext: BaseAudioContext | undefined): AnalyserNode | undefined {
     if (currentAnalyser?.context == audioContext) return currentAnalyser

@@ -18,6 +18,7 @@ const period = ref(5)
 // analyser output
 const sampleRate = ref(48000)
 const frequencyData: Ref<Float32Array> = ref(new Float32Array())
+const frequencyBinCount: Ref<number> = ref(0)
 
 // spectrogram inputs
 const dbRange = reactive({ min: -80, max: 0 })
@@ -55,6 +56,7 @@ const startStop = () => {
 
   const analyser = useAnalyser(noises, 1) // XXX make publish period adjustable?
   watchEffect(() => (sampleRate.value = analyser.sampleRate.value))
+  watchEffect(() => (frequencyBinCount.value = analyser.frequencyBinCount.value))
   watchEffect(() => (frequencyData.value = analyser.data.value))
 
   start()
