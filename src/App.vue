@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Pausable } from '@vueuse/core'
-import { computed, reactive, ref, watchEffect, type Ref } from 'vue'
+import { computed, onUnmounted, reactive, ref, watchEffect, type Ref } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import useAnalyser from './composables/useAnalyser'
 import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
@@ -70,6 +70,10 @@ const startStop = () => {
     audioContext?.suspend()
   }
 }
+
+onUnmounted(() => {
+  if (running.value) startStop()
+})
 </script>
 
 <template>
