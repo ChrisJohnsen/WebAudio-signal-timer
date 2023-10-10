@@ -2,6 +2,7 @@
 import { useCssVar, useResizeObserver } from '@vueuse/core'
 import { computed, onMounted, ref, watchEffect, type PropType } from 'vue'
 import { cubeYfColor } from '../assets/cubeYF'
+import useBins from '../composables/useBins'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const powerLegendHeight = 14 // includes separator
@@ -72,12 +73,12 @@ function drawLegend(canvas: HTMLCanvasElement) {
 
   // power legend
   const powerLegendTop = 0
-  const binCount = 256
-  const binWidth = canvas.width / binCount
-  for (let i = 0; i < binCount; i++) {
-    const binStart = Math.round(binWidth * i)
-    const binEnd = Math.round(binWidth * (i + 1))
-    ctx.fillStyle = cubeYfColor(Math.trunc((256 * i) / binCount))
+  const colors = 256
+  const { binFor: startPixelForColor } = useBins(canvas.width, 0, colors - 1)
+  for (let color = 0; color < colors; color++) {
+    const binStart = startPixelForColor(color).value
+    const binEnd = startPixelForColor(color + 1).value
+    ctx.fillStyle = cubeYfColor(color)
     ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
   }
   props.decibelRange.max - props.decibelRange.min
@@ -126,9 +127,9 @@ function drawLegend(canvas: HTMLCanvasElement) {
     const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
     ctx.textBaseline = 'bottom'
     const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
-    const pos = drawPosition(ctx.canvas.width, min, range)
+    const { binFor: pixelForFrequency } = useBins(ctx.canvas.width, min, max)
     for (let value = firstValue; value <= max; value += span) {
-      const labelPosition = pos(value)
+      const labelPosition = pixelForFrequency(value).value
       ctx.fillRect(labelPosition, y, 1, height)
       ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
     }
@@ -167,20 +168,20 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
   const binBandwidth = sampleRate / 2 / rowData.length
   let infra = -Infinity
   let ultra = -Infinity
-  const pos = drawPosition(
-    canvas.width,
+  const { binFor: pixelForFrequency } = useBins(
+    width,
     frequencies.value.minFrequency,
-    frequencies.value.bandWidth
+    frequencies.value.maxFrequency
   )
-  const dbMin = props.decibelRange.min
-  const dbRange = props.decibelRange.max - props.decibelRange.min
-  const dbIndex = (power: number) => {
-    return Math.trunc((Math.min(dbRange, Math.max(0, power - dbMin)) / dbRange) * 255)
-  }
+  const { binFor: colorIndexForPower } = useBins(
+    256,
+    props.decibelRange.min,
+    props.decibelRange.max
+  )
   for (let i = 0; i < rowData.length; i++) {
     const power = rowData[i]
-    const binStart = pos(i * binBandwidth)
-    const binEnd = pos((i + 1) * binBandwidth)
+    const binStart = pixelForFrequency(i * binBandwidth).value
+    const binEnd = pixelForFrequency((i + 1) * binBandwidth).value
     if (binEnd < oobWidth) {
       infra = Math.max(infra, power)
       continue
@@ -188,25 +189,17 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
       ultra = Math.max(ultra, power)
       continue
     }
-    ctx.fillStyle = cubeYfColor(dbIndex(power))
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(power).value)
     ctx.fillRect(binStart, headerHeight, binEnd - binStart, rowHeight)
   }
   if (isFinite(infra)) {
-    ctx.fillStyle = cubeYfColor(dbIndex(infra))
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(infra).value)
     ctx.fillRect(0, headerHeight, oobWidth, rowHeight)
   }
   if (isFinite(ultra)) {
-    ctx.fillStyle = cubeYfColor(dbIndex(ultra))
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(ultra).value)
     ctx.fillRect(width - oobWidth, headerHeight, oobWidth, rowHeight)
   }
-}
-
-function drawPosition(
-  drawWidth: number,
-  minValue: number,
-  valuesExtent: number
-): (value: number) => number {
-  return (value) => Math.trunc((drawWidth * (value - minValue)) / valuesExtent)
 }
 </script>
 
