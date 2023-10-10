@@ -43,7 +43,6 @@ const props = defineProps({
 })
 
 const frequencies = computed(() => {
-  // spell-checker: words Nyquist
   const nyquistFrequency = props.sampleRate / 2
   const minFrequency = props.band.low
   const maxFrequency = Math.min(props.band.high, nyquistFrequency)
