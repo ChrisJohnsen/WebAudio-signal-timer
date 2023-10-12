@@ -1,17 +1,8 @@
 <script setup lang="ts">
+import { cubeYfColor } from '@/assets/cubeYF'
+import { useBins, useFFTPixelBins } from '@/composables/useBins'
 import { useCssVar, useResizeObserver } from '@vueuse/core'
-import { computed, onMounted, ref, watchEffect, type PropType } from 'vue'
-import { cubeYfColor } from '../assets/cubeYF'
-import useBins from '../composables/useBins'
-
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const powerLegendHeight = 14 // includes separator
-const frequencyLabelsHeight = 10
-const headerHeight = powerLegendHeight + frequencyLabelsHeight
-
-// CSS "variables" XXX eventually react to dark mode, too
-const bgColor = useCssVar('--bg-color', document.body)
-const textColor = useCssVar('--text-color', document.body)
+import { computed, onMounted, ref, toRef, watchEffect, type PropType } from 'vue'
 
 const props = defineProps({
   decibelRange: {
@@ -36,6 +27,10 @@ const props = defineProps({
     type: Number,
     required: true
   },
+  frequencyBinCount: {
+    type: Number,
+    required: true
+  },
   data: {
     type: Float32Array,
     required: true
@@ -49,22 +44,27 @@ const frequencies = computed(() => {
   return { minFrequency, maxFrequency, bandWidth: maxFrequency - minFrequency }
 })
 
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const canvasWidth = ref(100)
+
+const powerLegendHeight = 14 // includes separator
+const frequencyLabelsHeight = 10
+const headerHeight = powerLegendHeight + frequencyLabelsHeight
+
 onMounted(() => {
   watchEffect(() => updateSpectrogram(props.sampleRate, props.data))
 
   useResizeObserver(canvasRef, (entries) => {
     const canvas = entries[0].target
     if (!(canvas instanceof HTMLCanvasElement)) return
-    canvas.width = entries[0].contentRect.width
-    drawLegend(canvas)
-  })
-
-  watchEffect(() => {
-    const canvas = canvasRef.value
-    if (!canvas) return
+    canvasWidth.value = entries[0].contentRect.width
     drawLegend(canvas)
   })
 })
+
+// CSS "variables" XXX eventually react to dark mode, too
+const bgColor = useCssVar('--bg-color', document.body)
+const textColor = useCssVar('--text-color', document.body)
 
 function drawLegend(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')
@@ -73,7 +73,7 @@ function drawLegend(canvas: HTMLCanvasElement) {
   // power legend
   const powerLegendTop = 0
   const colors = 256
-  const { binFor: startPixelForColor } = useBins(canvas.width, 0, colors - 1)
+  const startPixelForColor = useBins(canvas.width, 0, colors - 1).binFor
   for (let color = 0; color < colors; color++) {
     const binStart = startPixelForColor(color).value
     const binEnd = startPixelForColor(color + 1).value
@@ -126,9 +126,9 @@ function drawLegend(canvas: HTMLCanvasElement) {
     const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
     ctx.textBaseline = 'bottom'
     const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
-    const { binFor: pixelForFrequency } = useBins(ctx.canvas.width, min, max)
+    const pixelForValue = useBins(ctx.canvas.width, min, max).binFor
     for (let value = firstValue; value <= max; value += span) {
-      const labelPosition = pixelForFrequency(value).value
+      const labelPosition = pixelForValue(value).value
       ctx.fillRect(labelPosition, y, 1, height)
       ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
     }
@@ -143,10 +143,24 @@ function drawLegend(canvas: HTMLCanvasElement) {
   }
 }
 
-function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
-  if (!canvasRef.value) return
+const colorIndexForPower = useBins(
+  256,
+  () => props.decibelRange.min,
+  () => props.decibelRange.max
+).binFor
 
+const pixelsForFrequencyBin = useFFTPixelBins(
+  toRef(props, 'frequencyBinCount'),
+  toRef(props, 'sampleRate'),
+  canvasWidth,
+  () => frequencies.value.minFrequency,
+  () => frequencies.value.maxFrequency
+)
+
+function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
   const canvas = canvasRef.value
+  if (!canvas) return
+
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
@@ -164,32 +178,20 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
     height - rowHeight - headerHeight
   )
   const oobWidth = 4
-  const binBandwidth = sampleRate / 2 / rowData.length
   let infra = -Infinity
   let ultra = -Infinity
-  const { binFor: pixelForFrequency } = useBins(
-    width,
-    frequencies.value.minFrequency,
-    frequencies.value.maxFrequency
-  )
-  const { binFor: colorIndexForPower } = useBins(
-    256,
-    props.decibelRange.min,
-    props.decibelRange.max
-  )
   for (let i = 0; i < rowData.length; i++) {
     const power = rowData[i]
-    const binStart = pixelForFrequency(i * binBandwidth).value
-    const binEnd = pixelForFrequency((i + 1) * binBandwidth).value
-    if (binEnd < oobWidth) {
+    const binPixels = pixelsForFrequencyBin(i).value
+    if (binPixels.x + binPixels.width < oobWidth) {
       infra = Math.max(infra, power)
       continue
-    } else if (binStart > width - oobWidth) {
+    } else if (binPixels.x > width - oobWidth) {
       ultra = Math.max(ultra, power)
       continue
     }
     ctx.fillStyle = cubeYfColor(colorIndexForPower(power).value)
-    ctx.fillRect(binStart, headerHeight, binEnd - binStart, rowHeight)
+    ctx.fillRect(binPixels.x, headerHeight, binPixels.width, rowHeight)
   }
   if (isFinite(infra)) {
     ctx.fillStyle = cubeYfColor(colorIndexForPower(infra).value)
@@ -203,7 +205,7 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
 </script>
 
 <template>
-  <canvas ref="canvasRef" height="100" width="100">spectrogram history</canvas>
+  <canvas ref="canvasRef" height="100" :width="canvasWidth">spectrogram history</canvas>
 </template>
 
 <style scoped>
