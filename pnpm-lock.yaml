@@ -16,15 +16,15 @@ devDependencies:
   '@rushstack/eslint-patch':
     specifier: ^1.5.1
     version: 1.5.1
-  '@tsconfig/node18':
-    specifier: ^18.2.2
-    version: 18.2.2
+  '@tsconfig/node20':
+    specifier: ^20.1.2
+    version: 20.1.2
   '@types/jsdom':
     specifier: ^21.1.3
     version: 21.1.3
   '@types/node':
-    specifier: ^18.18.5
-    version: 18.18.5
+    specifier: ^20.8.5
+    version: 20.8.5
   '@vitejs/plugin-vue':
     specifier: ^4.4.0
     version: 4.4.0(vite@4.4.11)(vue@3.3.4)
@@ -66,7 +66,7 @@ devDependencies:
     version: 5.2.2
   vite:
     specifier: ^4.4.11
-    version: 4.4.11(@types/node@18.18.5)
+    version: 4.4.11(@types/node@20.8.5)
   vitest:
     specifier: ^0.34.6
     version: 0.34.6(jsdom@22.1.0)
@@ -436,8 +436,8 @@ packages:
     engines: {node: '>= 10'}
     dev: true
 
-  /@tsconfig/node18@18.2.2:
-    resolution: {integrity: sha512-d6McJeGsuoRlwWZmVIeE8CUA27lu6jLjvv1JzqmpsytOYYbVi1tHZEnwCNVOXnj4pyLvneZlFlpXUK+X9wBWyw==}
+  /@tsconfig/node20@20.1.2:
+    resolution: {integrity: sha512-madaWq2k+LYMEhmcp0fs+OGaLFk0OenpHa4gmI4VEmCKX4PJntQ6fnnGADVFrVkBj0wIdAlQnK/MrlYTHsa1gQ==}
     dev: true
 
   /@types/chai-subset@1.3.3:
@@ -453,7 +453,7 @@ packages:
   /@types/jsdom@21.1.3:
     resolution: {integrity: sha512-1zzqSP+iHJYV4lB3lZhNBa012pubABkj9yG/GuXuf6LZH1cSPIJBqFDrm5JX65HHt6VOnNYdTui/0ySerRbMgA==}
     dependencies:
-      '@types/node': 18.18.5
+      '@types/node': 20.8.5
       '@types/tough-cookie': 4.0.3
       parse5: 7.1.2
     dev: true
@@ -462,8 +462,10 @@ packages:
     resolution: {integrity: sha512-RbSSoHliUbnXj3ny0CNFOoxrIDV6SUGyStHsvDqosw6CkdPV8TtWGlfecuK4ToyMEAql6pzNxgCFKanovUzlgQ==}
     dev: true
 
-  /@types/node@18.18.5:
-    resolution: {integrity: sha512-4slmbtwV59ZxitY4ixUZdy1uRLf9eSIvBWPQxNjhHYWEtn0FryfKpyS2cvADYXTayWdKEIsJengncrVvkI4I6A==}
+  /@types/node@20.8.5:
+    resolution: {integrity: sha512-SPlobFgbidfIeOYlzXiEjSYeIJiOCthv+9tSQVpvk4PAdIIc+2SmjNVzWXk9t0Y7dl73Zdf+OgXKHX9XtkqUpw==}
+    dependencies:
+      undici-types: 5.25.3
     dev: true
 
   /@types/normalize-package-data@2.4.2:
@@ -620,7 +622,7 @@ packages:
       vite: ^4.0.0
       vue: ^3.2.25
     dependencies:
-      vite: 4.4.11(@types/node@18.18.5)
+      vite: 4.4.11(@types/node@20.8.5)
       vue: 3.3.4
     dev: true
 
@@ -2648,6 +2650,10 @@ packages:
     resolution: {integrity: sha512-uY/99gMLIOlJPwATcMVYfqDSxUR9//AUcgZMzwfSTJPDKzA1S8mX4VLqa+fiAtveraQUBCz4FFcwVZBGbwBXIw==}
     dev: true
 
+  /undici-types@5.25.3:
+    resolution: {integrity: sha512-Ga1jfYwRn7+cP9v8auvEXN1rX3sWqlayd4HP7OKk4mZWylEmu3KzXDUGrQUN6Ol7qo1gPvB2e5gX6udnyEPgdA==}
+    dev: true
+
   /universalify@0.2.0:
     resolution: {integrity: sha512-CJ1QgKmNg3CwvAv/kOFmtnEN05f0D/cn9QntgNOQlQF9dgvVTHj3t+8JPdjqawCHk7V/KA+fbUqzZ9XWhcqPUg==}
     engines: {node: '>= 4.0.0'}
@@ -2682,7 +2688,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: true
 
-  /vite-node@0.34.6(@types/node@18.18.5):
+  /vite-node@0.34.6(@types/node@20.8.5):
     resolution: {integrity: sha512-nlBMJ9x6n7/Amaz6F3zJ97EBwR2FkzhBRxF5e+jE6LA3yi6Wtc2lyTij1OnDMIr34v5g/tVQtsVAzhT0jc5ygA==}
     engines: {node: '>=v14.18.0'}
     hasBin: true
@@ -2692,7 +2698,7 @@ packages:
       mlly: 1.4.2
       pathe: 1.1.1
       picocolors: 1.0.0
-      vite: 4.4.11(@types/node@18.18.5)
+      vite: 4.4.11(@types/node@20.8.5)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -2704,7 +2710,7 @@ packages:
       - terser
     dev: true
 
-  /vite@4.4.11(@types/node@18.18.5):
+  /vite@4.4.11(@types/node@20.8.5):
     resolution: {integrity: sha512-ksNZJlkcU9b0lBwAGZGGaZHCMqHsc8OpgtoYhsQ4/I2v5cnpmmmqe5pM4nv/4Hn6G/2GhTdj0DhZh2e+Er1q5A==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -2732,7 +2738,7 @@ packages:
       terser:
         optional: true
     dependencies:
-      '@types/node': 18.18.5
+      '@types/node': 20.8.5
       esbuild: 0.18.20
       postcss: 8.4.31
       rollup: 3.29.4
@@ -2773,7 +2779,7 @@ packages:
     dependencies:
       '@types/chai': 4.3.8
       '@types/chai-subset': 1.3.3
-      '@types/node': 18.18.5
+      '@types/node': 20.8.5
       '@vitest/expect': 0.34.6
       '@vitest/runner': 0.34.6
       '@vitest/snapshot': 0.34.6
@@ -2793,8 +2799,8 @@ packages:
       strip-literal: 1.3.0
       tinybench: 2.5.1
       tinypool: 0.7.0
-      vite: 4.4.11(@types/node@18.18.5)
-      vite-node: 0.34.6(@types/node@18.18.5)
+      vite: 4.4.11(@types/node@20.8.5)
+      vite-node: 0.34.6(@types/node@20.8.5)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less
