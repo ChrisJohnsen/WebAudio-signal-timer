@@ -32,24 +32,6 @@ export default function useSignalDetector(
   })
   const detected = computed(() => snr.value > toValue(detectionSNR))
 
-  function linearAverage(data: Readonly<Array<number>>, weights?: Readonly<Array<number>>) {
-    return (
-      data.reduce((t, p, i) => t + p * (weights?.[i] ?? 1), 0) /
-      (weights?.reduce((t, w) => t + w, 0) ?? data.length)
-    )
-  }
-  function dBAverage(data: Readonly<Array<number>>, weights?: Readonly<Array<number>>) {
-    return (
-      10 *
-      Math.log10(
-        linearAverage(
-          data.map((p) => 10 ** (p / 10)),
-          weights
-        )
-      )
-    )
-  }
-
   return {
     testBand: computed(() => ({
       low: forBin(startBin).value.low,
@@ -58,4 +40,22 @@ export default function useSignalDetector(
     snr,
     detected
   }
+}
+
+function linearAverage(data: Readonly<Array<number>>, weights?: Readonly<Array<number>>) {
+  return (
+    data.reduce((t, p, i) => t + p * (weights?.[i] ?? 1), 0) /
+    (weights?.reduce((t, w) => t + w, 0) ?? data.length)
+  )
+}
+function dBAverage(data: Readonly<Array<number>>, weights?: Readonly<Array<number>>) {
+  return (
+    10 *
+    Math.log10(
+      linearAverage(
+        data.map((p) => 10 ** (p / 10)),
+        weights
+      )
+    )
+  )
 }
