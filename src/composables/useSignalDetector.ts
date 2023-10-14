@@ -25,13 +25,10 @@ export default function useSignalDetector(
   })
 
   const snr = computed(() => {
-    const allBins = Array.from(frequencyData.value)
-    const wholeAverage = dBAverage(allBins)
+    const otherBins = Array.from(frequencyData.value) // "other" starts with all, but we splice out the test bins
+    const testBins = otherBins.splice(startBin.value, endBin.value + 1 - startBin.value)
 
-    const testBins = allBins.slice(startBin.value, endBin.value + 1)
-    const bandAverage = dBAverage(testBins)
-
-    return bandAverage - wholeAverage
+    return dBAverage(testBins) - dBAverage(otherBins)
   })
   const detected = computed(() => snr.value > toValue(detectionSNR))
 
