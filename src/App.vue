@@ -11,6 +11,7 @@ const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
 
 // test audio settings
+const mute = ref(true)
 const snr_dB = ref(30)
 const gain = ref(1)
 const frequency = ref(440)
@@ -64,7 +65,13 @@ const startStop = () => {
 
   const noises = [periodic.node]
 
-  for (const noise of noises) noise.connect(audioContext.destination)
+  const monitorGain = computed(() => (mute.value ? 0 : 1))
+  const monitor = new GainNode(audioContext, { gain: monitorGain.value })
+  watch(monitorGain, (gain) =>
+    monitor.gain.setTargetAtTime(gain, monitor.context.currentTime, 0.02)
+  )
+  for (const noise of noises) noise.connect(monitor)
+  monitor.connect(audioContext.destination)
 
   const analyser = useAnalyser(noises, 1) // XXX make publish period adjustable?
   watchEffect(() => (sampleRate.value = analyser.sampleRate.value))
@@ -115,6 +122,9 @@ onUnmounted(() => {
 
   <main>
     <button @click="startStop" v-text="startStopText"></button>
+    <input id="demo-mute" type="checkbox" v-model="mute" /><label for="demo-mute"
+      >Mute demo audio</label
+    >
     <fieldset v-if="audioContext">
       <legend>Demo Sounds</legend>
       <div>
