@@ -1,15 +1,4 @@
-import {
-  computed,
-  readonly,
-  ref,
-  toRef,
-  toValue,
-  watch,
-  watchEffect,
-  type DeepReadonly,
-  type MaybeRefOrGetter,
-  type Ref
-} from 'vue'
+import { computed, toRef, toValue, type DeepReadonly, type MaybeRefOrGetter, type Ref } from 'vue'
 import { useFFTBins } from './useBins'
 
 export default function useSignalDetector(
@@ -35,24 +24,16 @@ export default function useSignalDetector(
     return Math.min(frequencyBinCount.value - 1, Math.max(centerBin.value + 1, endBin.value))
   })
 
-  const snr = ref(0)
-  const detected = computed(() => snr.value > toValue(detectionSNR))
-  const signalStartCount = ref(0)
-  const signalStopCount = ref(0)
-  watch(detected, (now, before) => {
-    if (now && !before) signalStartCount.value++
-    if (!now && before) signalStopCount.value++
-  })
-
-  watchEffect(() => {
+  const snr = computed(() => {
     const allBins = Array.from(frequencyData.value)
     const wholeAverage = dBAverage(allBins)
 
     const testBins = allBins.slice(startBin.value, endBin.value + 1)
     const bandAverage = dBAverage(testBins)
 
-    snr.value = bandAverage - wholeAverage
+    return bandAverage - wholeAverage
   })
+  const detected = computed(() => snr.value > toValue(detectionSNR))
 
   function linearAverage(data: Readonly<Array<number>>, weights?: Readonly<Array<number>>) {
     return (
@@ -77,8 +58,7 @@ export default function useSignalDetector(
       low: forBin(startBin).value.low,
       high: forBin(endBin).value.high
     })),
-    snr: readonly(snr),
-    signalStartCount: readonly(signalStartCount),
-    signalStopCount: readonly(signalStopCount)
+    snr,
+    detected
   }
 }

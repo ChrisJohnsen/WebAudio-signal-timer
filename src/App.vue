@@ -81,14 +81,10 @@ const startStop = () => {
     detectorSNR
   )
   watchEffect(() => (testBand.value = detector.testBand.value))
-  watch(
-    detector.signalStartCount,
-    () => (signalLog.value += `signal started (${detector.snr.value.toFixed(1)}) ${new Date()}\n`)
-  )
-  watch(
-    detector.signalStopCount,
-    () => (signalLog.value += `signal stopped (${detector.snr.value.toFixed(1)}) ${new Date()}\n`)
-  )
+  watch(detector.detected, (detected) => {
+    const which = detected ? 'started' : 'stopped'
+    signalLog.value += `signal ${which} (${detector.snr.value.toFixed(1)}) ${new Date()}\n`
+  })
   watch(signalLog, () => {
     const textarea = signalLogRef.value
     if (!textarea) return
