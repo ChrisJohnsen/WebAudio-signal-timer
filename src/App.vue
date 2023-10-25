@@ -6,6 +6,7 @@ import SpectrumLevels from './components/SpectrumLevels.vue'
 import useAnalyser from './composables/useAnalyser'
 import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
 import useSignalDetector from './composables/useSignalDetector'
+import useTimingRecovery, { type Event } from './composables/useTimingRecovery'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
@@ -50,8 +51,14 @@ const bandHighEmptyForInfinite = computed<number | string>({
   }
 })
 
+// timing recovery
+const recoveredPeriod = ref(NaN)
+const recoveredDuration = ref(NaN)
+const predictedNext = ref<Event | null>(null)
+
 let audioContext: AudioContext | undefined
 let periodicStoppable: Stoppable | undefined
+let resetTiming: () => void | undefined
 
 const startStop = () => {
   if (running.value) return stop()
@@ -111,16 +118,28 @@ const startStop = () => {
     })
   })
 
-  start()
+  // timing recovery
+  const event = ref<Event | null>(null)
+  watch(
+    detector.detected,
+    (detected) => (event.value = { type: detected ? 'start' : 'stop', date: Date.now() })
+  )
+  const timing = useTimingRecovery(event)
+  resetTiming = timing.reset
+  watch(timing.period, (period) => (recoveredPeriod.value = period))
+  watch(timing.duration, (duration) => (recoveredDuration.value = duration))
+  watch(timing.next, (next) => (predictedNext.value = next))
 
-  function start() {
-    audioContext?.resume()
-    periodicStoppable?.start()
-  }
-  function stop() {
-    periodicStoppable?.stop()
-    audioContext?.suspend()
-  }
+  start()
+}
+function start() {
+  resetTiming?.()
+  audioContext?.resume()
+  periodicStoppable?.start()
+}
+function stop() {
+  periodicStoppable?.stop()
+  audioContext?.suspend()
 }
 
 onUnmounted(() => {
@@ -132,10 +151,22 @@ onUnmounted(() => {
   <header>Signal Timer</header>
 
   <main>
-    <button @click="startStop" v-text="startStopText"></button>
-    <input id="demo-mute" type="checkbox" v-model="mute" /><label for="demo-mute"
-      >Mute demo audio</label
-    >
+    <div>
+      <button @click="startStop" v-text="startStopText"></button>
+      <input id="demo-mute" type="checkbox" v-model="mute" /><label for="demo-mute"
+        >Mute demo audio</label
+      >
+    </div>
+    <div>
+      Estimated Period: <span v-text="recoveredPeriod.toFixed(2)"></span>
+      <br />
+      Estimated Duration: <span v-text="recoveredDuration.toFixed(2)"></span>
+      <br />
+      <span v-if="predictedNext">
+        Estimated Next: <span v-text="predictedNext.type"></span> in
+        <span v-text="((predictedNext.date - Date.now()) / 1000).toFixed(2)"></span>sec
+      </span>
+    </div>
     <fieldset v-if="audioContext">
       <legend>Demo Sounds</legend>
       <div>
