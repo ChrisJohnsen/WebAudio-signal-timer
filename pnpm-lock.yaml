@@ -19,6 +19,9 @@ devDependencies:
   '@tsconfig/node20':
     specifier: ^20.1.2
     version: 20.1.2
+  '@types/gaussian':
+    specifier: ^1.2.1
+    version: 1.2.1
   '@types/jsdom':
     specifier: ^21.1.3
     version: 21.1.3
@@ -49,6 +52,9 @@ devDependencies:
   eslint-plugin-vue:
     specifier: ^9.17.0
     version: 9.17.0(eslint@8.51.0)
+  gaussian:
+    specifier: ^1.3.0
+    version: 1.3.0
   jsdom:
     specifier: ^22.1.0
     version: 22.1.0
@@ -438,6 +444,10 @@ packages:
 
   /@tsconfig/node20@20.1.2:
     resolution: {integrity: sha512-madaWq2k+LYMEhmcp0fs+OGaLFk0OenpHa4gmI4VEmCKX4PJntQ6fnnGADVFrVkBj0wIdAlQnK/MrlYTHsa1gQ==}
+    dev: true
+
+  /@types/gaussian@1.2.1:
+    resolution: {integrity: sha512-zdBD34jwmpFCktq2xhOYZEpukU955fsyvbqr+TaGT58hULC0H4gDqUK6i3OsCun88K2xSNKJg0SWRviM023rqg==}
     dev: true
 
   /@types/jsdom@21.1.3:
@@ -1567,6 +1577,11 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /gaussian@1.3.0:
+    resolution: {integrity: sha512-rYQ0ESfB+z0t7G95nHH80Zh7Pgg9A0FUYoZqV0yPec5WJZWKIHV2MPYpiJNy8oZAeVqyKwC10WXKSCnUQ5iDVg==}
+    engines: {node: '>= 0.6.0'}
+    dev: true
 
   /get-func-name@2.0.2:
     resolution: {integrity: sha512-8vXOvuE167CtIc3OyItco7N/dpRtBbYOsPsXCz7X/PMnlGjYjSGuZJgM1Y7mmew7BKf9BqvLX2tnOVy1BBUsxQ==}

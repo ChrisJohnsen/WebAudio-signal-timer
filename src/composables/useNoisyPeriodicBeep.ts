@@ -1,5 +1,6 @@
-import { useIntervalFn, type Pausable } from '@vueuse/core'
-import { computed, toRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { useTimeoutFn, type Stoppable } from '@vueuse/core'
+import gaussian from 'gaussian'
+import { computed, isRef, ref, toRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import useBeep from './useBeep'
 import useWhiteNoise from './useWhiteNoise'
 
@@ -8,12 +9,16 @@ export default function useNoisyPeriodicBeep(
   snr_dB: MaybeRefOrGetter<number>,
   beep: {
     frequency: MaybeRefOrGetter<number>
-    duration: MaybeRefOrGetter<number>
-    period: MaybeRefOrGetter<number>
+    duration:
+      | MaybeRefOrGetter<number>
+      | { mean: MaybeRefOrGetter<number>; stddev: MaybeRefOrGetter<number> }
+    period:
+      | MaybeRefOrGetter<number>
+      | { mean: MaybeRefOrGetter<number>; stddev: MaybeRefOrGetter<number> }
   },
   gain: MaybeRefOrGetter<number> = 1
 ): {
-  pause: Pausable
+  stop: Stoppable
   node: AudioNode
   gainParam: AudioParam
 } {
@@ -39,10 +44,32 @@ export default function useNoisyPeriodicBeep(
   noise.node.connect(gainNode)
   beeper.node.connect(gainNode)
 
-  const pause = useIntervalFn(
-    () => beeper.beep(toValue(beep.duration)),
-    computed(() => 1000 * toRef(beep.period).value),
-    { immediate: true }
+  const getRandomPeriod = computedGetterForRandomValue(beep.period)
+  const period = ref(getRandomPeriod.value())
+  const getRandomDuration = computedGetterForRandomValue(beep.duration)
+
+  const stop = useTimeoutFn(
+    () => {
+      beeper.beep(getRandomDuration.value())
+      period.value = getRandomPeriod.value()
+      stop.start()
+    },
+    () => 1000 * period.value
   )
-  return { pause, node: gainNode, gainParam: gainNode.gain }
+
+  return { stop, node: gainNode, gainParam: gainNode.gain }
+}
+
+function computedGetterForRandomValue(
+  valueSpec:
+    | MaybeRefOrGetter<number>
+    | { mean: MaybeRefOrGetter<number>; stddev: MaybeRefOrGetter<number> }
+) {
+  if (typeof valueSpec == 'number' || isRef(valueSpec) || typeof valueSpec == 'function')
+    return computed(() => () => toValue(valueSpec))
+
+  return computed(() => {
+    const g = gaussian(toValue(valueSpec.mean), toValue(valueSpec.stddev))
+    return () => g.random(1)[0]
+  })
 }

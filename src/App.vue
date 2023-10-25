@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Pausable } from '@vueuse/core'
+import type { Stoppable } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, reactive, ref, watch, watchEffect, type Ref } from 'vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import SpectrumLevels from './components/SpectrumLevels.vue'
@@ -16,7 +16,9 @@ const snr_dB = ref(30)
 const gain = ref(1)
 const frequency = ref(440)
 const duration = ref(1)
+const durationSD = ref(0.2)
 const period = ref(5)
+const periodSD = ref(1)
 
 // analyser output
 const sampleRate = ref(48000)
@@ -49,7 +51,7 @@ const bandHighEmptyForInfinite = computed<number | string>({
 })
 
 let audioContext: AudioContext | undefined
-let periodicPauser: Pausable | undefined
+let periodicStoppable: Stoppable | undefined
 
 const startStop = () => {
   if (running.value) return stop()
@@ -60,8 +62,17 @@ const startStop = () => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
 
-  const periodic = useNoisyPeriodicBeep(audioContext, snr_dB, { frequency, duration, period }, gain)
-  periodicPauser = periodic.pause
+  const periodic = useNoisyPeriodicBeep(
+    audioContext,
+    snr_dB,
+    {
+      frequency,
+      duration: { mean: duration, stddev: durationSD },
+      period: { mean: period, stddev: periodSD }
+    },
+    gain
+  )
+  periodicStoppable = periodic.stop
 
   const noises = [periodic.node]
 
@@ -104,10 +115,10 @@ const startStop = () => {
 
   function start() {
     audioContext?.resume()
-    periodicPauser?.resume()
+    periodicStoppable?.start()
   }
   function stop() {
-    periodicPauser?.pause()
+    periodicStoppable?.stop()
     audioContext?.suspend()
   }
 }
@@ -138,10 +149,14 @@ onUnmounted(() => {
       <div>
         <label for="beep-duration">Beep Duration (s):</label
         ><input id="beep-duration" type="number" v-model="duration" min="0" :max="period" />
+        <label for="beep-duration-sd"> &sigma; </label>
+        <input id="beep-duration-sd" type="number" v-model="durationSD" />
       </div>
       <div>
         <label for="beep-period">Beep Period (s):</label
         ><input id="beep-period" type="number" v-model="period" min="1" />
+        <label for="beep-period-sd"> &sigma; </label>
+        <input id="beep-period-sd" type="number" v-model="periodSD" />
       </div>
       <div>
         <label for="beep-snr">Beep SNR (power-to-power; dB):</label
