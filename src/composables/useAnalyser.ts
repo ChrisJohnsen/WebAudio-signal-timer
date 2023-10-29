@@ -1,10 +1,12 @@
 import { useIntervalFn } from '@vueuse/core'
 import {
+  computed,
   readonly,
   ref,
   shallowReadonly,
   shallowRef,
   toRef,
+  toValue,
   watch,
   type DeepReadonly,
   type MaybeRefOrGetter,
@@ -19,12 +21,13 @@ export default function useAnalyser(
   sampleRate: Readonly<Ref<number>>
   frequencyBinCount: Readonly<Ref<number>>
   data: DeepReadonly<ShallowRef<Float32Array>>
+  minimumPublishPeriod: Readonly<Ref<number>>
 } {
   const inputsRef = toRef(inputs)
-  const publishPeriodRef = toRef(publishPeriod)
+  const samplePeriod = 0.1 // seconds
+  const minimumPublishPeriod = samplePeriod * 2
+  const publishPeriodRef = computed(() => Math.min(minimumPublishPeriod, toValue(publishPeriod)))
   const sampleRateRef = ref(48000)
-
-  const samplePeriod = 100 // ms
 
   const fftSize = 512
   const length = fftSize / 2
@@ -48,7 +51,7 @@ export default function useAnalyser(
       const now = Date.now()
       if (now - lastPublish >= publishPeriodRef.value * 1000) publish(now)
     },
-    samplePeriod,
+    samplePeriod * 1000,
     { immediate: false, immediateCallback: true }
   )
   function publish(now = Date.now()) {
@@ -76,7 +79,8 @@ export default function useAnalyser(
   return {
     sampleRate: shallowReadonly(sampleRateRef),
     frequencyBinCount: shallowReadonly(ref(length)),
-    data: readonly(publishedArrayRef)
+    data: readonly(publishedArrayRef),
+    minimumPublishPeriod: readonly(ref(minimumPublishPeriod)) // static for now
   }
 
   function getAnalyser(audioContext: BaseAudioContext | undefined): AnalyserNode | undefined {

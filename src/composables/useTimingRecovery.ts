@@ -7,23 +7,34 @@ export default function useTimingRecovery(
   expectedPeriod?: MaybeRefOrGetter<number | undefined>,
   expectedDuration?: MaybeRefOrGetter<number | undefined>
 ) {
-  const recovery = new TimingRecovery([], toValue(expectedPeriod), toValue(expectedDuration))
+  const recovery = new TimingRecovery(
+    [],
+    toMilliValue(expectedPeriod),
+    toMilliValue(expectedDuration)
+  )
 
   const updated = ref(false)
   const update = (...ignored: unknown[]) => void ((updated.value = !updated.value), ignored)
   const whenUpdated = <T>(fn: () => T) => computed(() => (updated.value, fn()))
 
-  const duration = whenUpdated(() => recovery.duration)
-  const period = whenUpdated(() => recovery.period)
+  const duration = whenUpdated(() => recovery.duration / 1000)
+  const period = whenUpdated(() => recovery.period / 1000)
   const next = whenUpdated(() => recovery.next)
   const reset = () => update(recovery.reset())
 
   watch(event, (event) => event && update(recovery.addEvent(event)), { immediate: true })
   watch([toRef(expectedPeriod), toRef(expectedDuration)], ([period, duration]) =>
-    update(recovery.setExpected(period, duration))
+    update(recovery.setExpected(toMilli(period), toMilli(duration)))
   )
 
   return { reset, period, duration, next }
+
+  function toMilli(secs: number | undefined) {
+    return secs && 1000 * secs
+  }
+  function toMilliValue(secs: MaybeRefOrGetter<number | undefined> | undefined) {
+    return toMilli(toValue(secs))
+  }
 }
 
 const expectedMaxSamples = 4 // if we have fewer period/duration samples, then the "expected" value is factored in (if given)

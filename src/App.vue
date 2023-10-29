@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Stoppable } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, reactive, ref, watch, watchEffect, type Ref } from 'vue'
+import PeriodSettings from './components/PeriodSettings.vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import SpectrumLevels from './components/SpectrumLevels.vue'
 import useAnalyser from './composables/useAnalyser'
@@ -10,6 +11,11 @@ import useTimingRecovery, { type Event } from './composables/useTimingRecovery'
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
+
+// time settings
+const expectedPeriod = ref<number | undefined>()
+const expectedDuration = ref<number | undefined>()
+const reportingPeriod = ref(1)
 
 // test audio settings
 const mute = ref(true)
@@ -22,9 +28,13 @@ const period = ref(5)
 const periodSD = ref(1)
 
 // analyser output
-const sampleRate = ref(48000)
-const frequencyData: Ref<Float32Array> = ref(new Float32Array())
-const frequencyBinCount: Ref<number> = ref(0)
+const analyserInputs = ref<AudioNode[]>([])
+const {
+  sampleRate,
+  frequencyBinCount,
+  data: frequencyData,
+  minimumPublishPeriod: minimumReportingPeriod
+} = useAnalyser(analyserInputs, reportingPeriod)
 
 // signal log
 const signalLogRef: Ref<HTMLTextAreaElement | null> = ref(null)
@@ -91,16 +101,13 @@ const startStop = () => {
   for (const noise of noises) noise.connect(monitor)
   monitor.connect(audioContext.destination)
 
-  const analyser = useAnalyser(noises, 1) // XXX make publish period adjustable?
-  watchEffect(() => (sampleRate.value = analyser.sampleRate.value))
-  watchEffect(() => (frequencyBinCount.value = analyser.frequencyBinCount.value))
-  watchEffect(() => (frequencyData.value = analyser.data.value))
+  analyserInputs.value = noises
 
   // signal detection
   const detector = useSignalDetector(
-    analyser.sampleRate,
-    analyser.frequencyBinCount,
-    analyser.data,
+    sampleRate,
+    frequencyBinCount,
+    frequencyData,
     detectorFrequency,
     detectorBandwidth,
     detectorSNR
@@ -124,11 +131,11 @@ const startStop = () => {
     detector.detected,
     (detected) => (event.value = { type: detected ? 'start' : 'stop', date: Date.now() })
   )
-  const timing = useTimingRecovery(event)
+  const timing = useTimingRecovery(event, expectedPeriod, expectedDuration)
   resetTiming = timing.reset
-  watch(timing.period, (period) => (recoveredPeriod.value = period))
-  watch(timing.duration, (duration) => (recoveredDuration.value = duration))
-  watch(timing.next, (next) => (predictedNext.value = next))
+  watch(timing.period, (period) => (recoveredPeriod.value = period), { immediate: true })
+  watch(timing.duration, (duration) => (recoveredDuration.value = duration), { immediate: true })
+  watch(timing.next, (next) => (predictedNext.value = next), { immediate: true })
 
   start()
 }
@@ -151,13 +158,19 @@ onUnmounted(() => {
   <header>Signal Timer</header>
 
   <main>
+    <PeriodSettings
+      v-model:period="expectedPeriod"
+      v-model:duration="expectedDuration"
+      v-model:reporting-period="reportingPeriod"
+      :minimum-reporting-period="minimumReportingPeriod"
+    ></PeriodSettings>
     <div>
       <button @click="startStop" v-text="startStopText"></button>
       <input id="demo-mute" type="checkbox" v-model="mute" /><label for="demo-mute"
         >Mute demo audio</label
       >
     </div>
-    <div>
+    <div v-if="audioContext">
       Estimated Period: <span v-text="recoveredPeriod.toFixed(2)"></span>
       <br />
       Estimated Duration: <span v-text="recoveredDuration.toFixed(2)"></span>
