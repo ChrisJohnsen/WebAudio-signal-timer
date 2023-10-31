@@ -4,6 +4,7 @@ import { computed, nextTick, onUnmounted, reactive, ref, watch, watchEffect, typ
 import PeriodSettings from './components/PeriodSettings.vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import SpectrumLevels from './components/SpectrumLevels.vue'
+import TimerDisplay from './components/TimerDisplay.vue'
 import useAnalyser from './composables/useAnalyser'
 import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
 import useSignalDetector from './composables/useSignalDetector'
@@ -170,16 +171,12 @@ onUnmounted(() => {
         >Mute demo audio</label
       >
     </div>
-    <div v-if="audioContext">
-      Estimated Period: <span v-text="recoveredPeriod.toFixed(2)"></span>
-      <br />
-      Estimated Duration: <span v-text="recoveredDuration.toFixed(2)"></span>
-      <br />
-      <span v-if="predictedNext">
-        Estimated Next: <span v-text="predictedNext.type"></span> in
-        <span v-text="((predictedNext.date - Date.now()) / 1000).toFixed(2)"></span>sec
-      </span>
-    </div>
+    <TimerDisplay
+      :do-updates="running"
+      :period="recoveredPeriod"
+      :duration="recoveredDuration"
+      :next="predictedNext"
+    />
     <fieldset v-if="audioContext">
       <legend>Demo Sounds</legend>
       <div>
