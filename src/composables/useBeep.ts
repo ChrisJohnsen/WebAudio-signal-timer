@@ -76,7 +76,11 @@ function beep(
     fn: (currentTime: number, requestedTime: number) => void
   ) {
     const timer = new ConstantSourceNode(audioContext)
-    timer.addEventListener('ended', () => fn(audioContext.currentTime, requestedTime))
+    const ended = () => {
+      fn(audioContext.currentTime, requestedTime)
+      timer.removeEventListener('ended', ended)
+    }
+    timer.addEventListener('ended', ended)
     timer.start(requestedTime - 0.1)
     timer.stop(requestedTime)
   }
