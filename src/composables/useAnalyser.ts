@@ -26,7 +26,7 @@ export default function useAnalyser(
   const inputsRef = toRef(inputs)
   const samplePeriod = 0.1 // seconds
   const minimumPublishPeriod = samplePeriod * 2
-  const publishPeriodRef = computed(() => Math.min(minimumPublishPeriod, toValue(publishPeriod)))
+  const publishPeriodRef = computed(() => Math.max(minimumPublishPeriod, toValue(publishPeriod)))
   const sampleRateRef = ref(48000)
 
   const fftSize = 512
