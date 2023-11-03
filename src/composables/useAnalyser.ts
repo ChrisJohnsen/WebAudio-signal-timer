@@ -65,7 +65,13 @@ export default function useAnalyser(
     (newInputs, oldInputs) => {
       if (currentAnalyser && oldInputs) {
         const newSet = new Set(newInputs)
-        for (const input of oldInputs) if (!newSet.has(input)) input.disconnect(currentAnalyser)
+        for (const input of oldInputs)
+          if (!newSet.has(input))
+            try {
+              input.disconnect(currentAnalyser)
+            } catch (e) {
+              void e
+            }
       }
 
       const analyser = getAnalyser(newInputs[0]?.context)

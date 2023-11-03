@@ -1,34 +1,36 @@
 <script setup lang="ts">
-import type { Stoppable } from '@vueuse/core'
-import { computed, nextTick, onUnmounted, reactive, ref, watch, watchEffect, type Ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+  watchEffect,
+  type Ref
+} from 'vue'
 import PeriodSettings from './components/PeriodSettings.vue'
+import SourceSelector from './components/SourceSelector.vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import SpectrumLevels from './components/SpectrumLevels.vue'
 import TimerDisplay from './components/TimerDisplay.vue'
 import useAnalyser from './composables/useAnalyser'
-import useNoisyPeriodicBeep from './composables/useNoisyPeriodicBeep'
 import useSignalDetector from './composables/useSignalDetector'
 import useTimingRecovery, { type Event } from './composables/useTimingRecovery'
 
 const running = ref(false)
-const startStopText = computed(() => (running.value ? 'Stop Audio' : 'Start Audio'))
+const startStopText = computed(() => (running.value ? 'Stop Timing' : 'Start Timing'))
+
+// monitor
+const monitorGain = ref(0)
 
 // time settings
 const expectedPeriod = ref<number | undefined>()
 const expectedDuration = ref<number | undefined>()
 const reportingPeriod = ref(1)
 
-// test audio settings
-const mute = ref(true)
-const snr_dB = ref(30)
-const gain = ref(1)
-const frequency = ref(440)
-const duration = ref(1)
-const durationSD = ref(0.2)
-const period = ref(5)
-const periodSD = ref(1)
-
-// analyser output
+// analyser
 const analyserInputs = ref<AudioNode[]>([])
 const {
   sampleRate,
@@ -37,17 +39,17 @@ const {
   minimumPublishPeriod: minimumReportingPeriod
 } = useAnalyser(analyserInputs, reportingPeriod)
 
-// signal log
-const signalLogRef: Ref<HTMLTextAreaElement | null> = ref(null)
-const signalLog = ref('')
-
 // detector
 const detectorFrequency = ref(440)
 const detectorBandwidth = ref(400)
 const detectorSNR = ref(6)
 const testBand = ref({ low: 0, high: sampleRate.value / 2 })
 
-// spectrogram inputs
+// signal log
+const signalLogRef: Ref<HTMLTextAreaElement | null> = ref(null)
+const signalLog = ref('')
+
+// custom spectrogram
 const dbRange = reactive({ min: -80, max: 0 })
 const band = reactive({ low: 0, high: Infinity })
 const bandHighEmptyForInfinite = computed<number | string>({
@@ -67,42 +69,41 @@ const recoveredPeriod = ref(NaN)
 const recoveredDuration = ref(NaN)
 const predictedNext = ref<Event | null>(null)
 
-let audioContext: AudioContext | undefined
-let periodicStoppable: Stoppable | undefined
+const audioContext = new AudioContext() // this may generate a warning since this isn't triggered by a "user gesture"
 let resetTiming: () => void | undefined
 
 const startStop = () => {
   if (running.value) return stop()
-  if (audioContext) return start()
+  start()
+}
+function start() {
+  resetTiming?.()
+  audioContext.resume()
+}
+function stop() {
+  audioContext.suspend()
+}
 
-  audioContext = new AudioContext()
+onMounted(() => {
+  audioContext.suspend() // wait for resume, don't just start when the first source node is started
   audioContext.addEventListener('statechange', () => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
 
-  const periodic = useNoisyPeriodicBeep(
-    audioContext,
-    snr_dB,
-    {
-      frequency,
-      duration: { mean: duration, stddev: durationSD },
-      period: { mean: period, stddev: periodSD }
-    },
-    gain
-  )
-  periodicStoppable = periodic.stop
-
-  const noises = [periodic.node]
-
-  const monitorGain = computed(() => (mute.value ? 0 : 1))
   const monitor = new GainNode(audioContext, { gain: monitorGain.value })
   watch(monitorGain, (gain) =>
     monitor.gain.setTargetAtTime(gain, monitor.context.currentTime, 0.02)
   )
-  for (const noise of noises) noise.connect(monitor)
+  watch(analyserInputs, (i, o) => {
+    for (const node of o)
+      try {
+        node.disconnect(monitor)
+      } catch (e) {
+        void e
+      }
+    for (const node of i) node.connect(monitor)
+  })
   monitor.connect(audioContext.destination)
-
-  analyserInputs.value = noises
 
   // signal detection
   const detector = useSignalDetector(
@@ -137,21 +138,9 @@ const startStop = () => {
   watch(timing.period, (period) => (recoveredPeriod.value = period), { immediate: true })
   watch(timing.duration, (duration) => (recoveredDuration.value = duration), { immediate: true })
   watch(timing.next, (next) => (predictedNext.value = next), { immediate: true })
-
-  start()
-}
-function start() {
-  resetTiming?.()
-  audioContext?.resume()
-  periodicStoppable?.start()
-}
-function stop() {
-  periodicStoppable?.stop()
-  audioContext?.suspend()
-}
-
+})
 onUnmounted(() => {
-  if (running.value) startStop()
+  if (running.value) stop()
 })
 </script>
 
@@ -159,6 +148,27 @@ onUnmounted(() => {
   <header>Signal Timer</header>
 
   <main>
+    <SourceSelector
+      :audio-context="audioContext"
+      :active="running"
+      @source="(n) => (analyserInputs = n ? [n] : [])"
+    />
+    <div>
+      <label for="monitor-gain">Monitor Gain: </label>
+      <input
+        id="monitor-gain"
+        type="range"
+        v-model="monitorGain"
+        min="0"
+        max="5"
+        step="any"
+        list="gain-levels"
+      />
+      <datalist id="gain-levels">
+        <option value="0"></option>
+        <option value="1"></option>
+      </datalist>
+    </div>
     <PeriodSettings
       v-model:period="expectedPeriod"
       v-model:duration="expectedDuration"
@@ -167,9 +177,6 @@ onUnmounted(() => {
     ></PeriodSettings>
     <div>
       <button @click="startStop" v-text="startStopText"></button>
-      <input id="demo-mute" type="checkbox" v-model="mute" /><label for="demo-mute"
-        >Mute demo audio</label
-      >
     </div>
     <TimerDisplay
       :do-updates="running"
@@ -177,132 +184,77 @@ onUnmounted(() => {
       :duration="recoveredDuration"
       :next="predictedNext"
     />
-    <fieldset v-if="audioContext">
-      <legend>Demo Sounds</legend>
+    <textarea ref="signalLogRef" :readonly="true" v-text="signalLog" cols="80" rows="10"></textarea>
+    <fieldset>
+      <legend>Signal Detection Settings</legend>
       <div>
-        <label for="demo-gain">Gain</label
-        ><input id="demo-gain" type="number" v-model="gain" min="0" />
+        <label for="detector-central">Central Frequency</label
+        ><input
+          id="detector-central"
+          type="number"
+          min="0"
+          :max="sampleRate / 2"
+          v-model.number="detectorFrequency"
+        />
       </div>
       <div>
-        <label for="beep-frequency">Beep Frequency (Hz):</label
-        ><input id="beep-frequency" type="number" v-model="frequency" min="1" />
+        <label for="detector-bandwidth">Bandwidth</label
+        ><input id="detector-bandwidth" type="number" min="50" v-model="detectorBandwidth" />
       </div>
       <div>
-        <label for="beep-duration">Beep Duration (s):</label
-        ><input id="beep-duration" type="number" v-model="duration" min="0" :max="period" />
-        <label for="beep-duration-sd"> &sigma; </label>
-        <input id="beep-duration-sd" type="number" v-model="durationSD" />
-      </div>
-      <div>
-        <label for="beep-period">Beep Period (s):</label
-        ><input id="beep-period" type="number" v-model="period" min="1" />
-        <label for="beep-period-sd"> &sigma; </label>
-        <input id="beep-period-sd" type="number" v-model="periodSD" />
-      </div>
-      <div>
-        <label for="beep-snr">Beep SNR (power-to-power; dB):</label
-        ><input id="beep-snr" type="number" v-model="snr_dB" min="0" />
+        <label for="detector-snr">Required SNR</label
+        ><input id="detector-snr" type="number" min="0" v-model.number="detectorSNR" />
       </div>
     </fieldset>
-    <div v-if="audioContext">
-      <textarea
-        ref="signalLogRef"
-        :readonly="true"
-        v-text="signalLog"
-        cols="80"
-        rows="10"
-      ></textarea>
-      <fieldset>
-        <legend>Signal Detection Settings</legend>
-        <div>
-          <label for="detector-central">Central Frequency</label
-          ><input
-            id="detector-central"
-            type="number"
-            min="0"
-            :max="sampleRate / 2"
-            v-model.number="detectorFrequency"
-          />
-        </div>
-        <div>
-          <label for="detector-bandwidth">Bandwidth</label
-          ><input id="detector-bandwidth" type="number" min="50" v-model="detectorBandwidth" />
-        </div>
-        <div>
-          <label for="detector-snr">Required SNR</label
-          ><input id="detector-snr" type="number" min="0" v-model.number="detectorSNR" />
-        </div>
-      </fieldset>
-      Signal Detection Band:
-      <SpectrumLevels
-        :decibel-range="dbRange"
-        :band="testBand"
-        :sample-rate="sampleRate"
-        :frequency-bin-count="frequencyBinCount"
-        :data="frequencyData"
-      />
-      <SpectrogramHistory
-        :decibel-range="dbRange"
-        :band="testBand"
-        :sample-rate="sampleRate"
-        :frequency-bin-count="frequencyBinCount"
-        :data="frequencyData"
-      />
-      <div v-if="audioContext">
-        Custom Band:
-        <SpectrogramHistory
-          :decibel-range="dbRange"
-          :band="band"
-          :sample-rate="sampleRate"
-          :frequency-bin-count="frequencyBinCount"
-          :data="frequencyData"
-        />
-        <fieldset>
-          <legend>Spectrogram Settings</legend>
-          <div>
-            <label for="min-db">Minimum dB</label
-            ><input
-              id="min-db"
-              type="number"
-              min="-150"
-              :max="dbRange.max - 1"
-              v-model="dbRange.min"
-            />
-          </div>
-          <div>
-            <label for="max-db">Maximum dB</label
-            ><input
-              id="max-db"
-              type="number"
-              :min="dbRange.min + 1"
-              max="0"
-              v-model="dbRange.max"
-            />
-          </div>
-          <div>
-            <label for="band-low">lowest frequency</label
-            ><input
-              id="band-low"
-              type="number"
-              min="0"
-              :max="band.high"
-              v-model.number="band.low"
-            />
-          </div>
-          <div>
-            <label for="band-high">highest frequency</label>
-            <input
-              id="band-high"
-              type="number"
-              :min="band.low"
-              max="30000"
-              placeholder="maximum"
-              v-model="bandHighEmptyForInfinite"
-            />
-          </div>
-        </fieldset>
+    Signal Detection Band:
+    <SpectrumLevels
+      :decibel-range="dbRange"
+      :band="testBand"
+      :sample-rate="sampleRate"
+      :frequency-bin-count="frequencyBinCount"
+      :data="frequencyData"
+    />
+    <SpectrogramHistory
+      :decibel-range="dbRange"
+      :band="testBand"
+      :sample-rate="sampleRate"
+      :frequency-bin-count="frequencyBinCount"
+      :data="frequencyData"
+    />
+    Custom Band:
+    <SpectrogramHistory
+      :decibel-range="dbRange"
+      :band="band"
+      :sample-rate="sampleRate"
+      :frequency-bin-count="frequencyBinCount"
+      :data="frequencyData"
+    />
+    <fieldset>
+      <legend>Spectrogram Settings</legend>
+      <div>
+        <label for="min-db">Minimum dB</label
+        ><input id="min-db" type="number" min="-150" :max="dbRange.max - 1" v-model="dbRange.min" />
       </div>
-    </div>
+      <div>
+        <label for="max-db">Maximum dB</label
+        ><input id="max-db" type="number" :min="dbRange.min + 1" max="0" v-model="dbRange.max" />
+      </div>
+      <div>
+        <label for="band-low">lowest frequency</label
+        ><input id="band-low" type="number" min="0" :max="band.high" v-model.number="band.low" />
+      </div>
+      <div>
+        <label for="band-high">highest frequency</label>
+        <input
+          id="band-high"
+          type="number"
+          :min="band.low"
+          max="30000"
+          placeholder="maximum"
+          v-model="bandHighEmptyForInfinite"
+        />
+      </div>
+    </fieldset>
   </main>
 </template>
 

@@ -7,6 +7,7 @@ export default function useBeep(
   node: AudioNode
   beeping: Readonly<Ref<boolean>>
   beep: (duration?: number, onDone?: () => void) => void
+  shutdown: () => void
 } {
   const frequencyRef = toRef(frequency)
   const oscillator = new OscillatorNode(audioContext, {
@@ -28,7 +29,12 @@ export default function useBeep(
   return {
     node: gain,
     beeping: readonly(beeping),
-    beep: beep(audioContext, gain.gain, beeping)
+    beep: beep(audioContext, gain.gain, beeping),
+    shutdown: () => {
+      oscillator.stop()
+      oscillator.disconnect()
+      gain.disconnect()
+    }
   }
 }
 

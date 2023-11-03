@@ -4,7 +4,7 @@ export default function useWhiteNoise(
   audioContext: BaseAudioContext,
   duration: number,
   gain: MaybeRefOrGetter<number> = 1
-): { node: AudioNode; gain: Ref<number> } {
+): { node: AudioNode; gain: Ref<number>; shutdown: () => void } {
   const gainRef = toRef(gain)
   const noiseNode = whiteNoiseNode(audioContext, duration)
   const gainNode = new GainNode(audioContext, { gain: gainRef.value })
@@ -13,7 +13,15 @@ export default function useWhiteNoise(
     gainNode.gain.setTargetAtTime(gain, audioContext.currentTime, 0.02)
   })
   noiseNode.start()
-  return { gain: gainRef, node: gainNode }
+  return {
+    gain: gainRef,
+    node: gainNode,
+    shutdown: () => {
+      noiseNode.stop()
+      noiseNode.disconnect()
+      gainNode.disconnect()
+    }
+  }
 }
 
 export function whiteNoiseNode(audioContext: BaseAudioContext, duration: number) {

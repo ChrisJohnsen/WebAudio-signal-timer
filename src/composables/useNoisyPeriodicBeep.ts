@@ -21,6 +21,7 @@ export default function useNoisyPeriodicBeep(
   stop: Stoppable
   node: AudioNode
   gainParam: AudioParam
+  shutdown: () => void
 } {
   const snr_dB_ref = toRef(snr_dB)
   // SNR is power/power, which is also (amplitude/amplitude)^2
@@ -57,7 +58,16 @@ export default function useNoisyPeriodicBeep(
     () => 1000 * period.value
   )
 
-  return { stop, node: gainNode, gainParam: gainNode.gain }
+  const shutdown = () => {
+    stop.stop()
+    noise.node.disconnect()
+    noise.shutdown()
+    beeper.node.disconnect()
+    beeper.shutdown()
+    gainNode.disconnect()
+  }
+
+  return { stop, node: gainNode, gainParam: gainNode.gain, shutdown }
 }
 
 function computedGetterForRandomValue(
