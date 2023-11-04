@@ -93,9 +93,9 @@ function updateSpectrum() {
   }
   for (let i = 0; i < props.frequencyBinCount; i++) {
     const power = data[i]
-    const colorIndex = colorIndexForPower(power).value
+    const colorIndex = colorIndexForPower(power)
     const barHeight = colorIndex + 1
-    const bar = pixelsForFrequencyBin(i).value
+    const bar = pixelsForFrequencyBin(i)
     if (bar.x < 0) continue
     if (bar.x + bar.width > width) break
     if (power > max.power) {

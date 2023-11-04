@@ -14,14 +14,14 @@ export default function useSignalDetector(
   )
   const { binFor, forBin } = useFFTBins(frequencyBinCount, 0, () => samplingRate.value / 2)
 
-  const centerBin = binFor(signalCenterFrequency)
+  const centerBin = computed(() => binFor(toValue(signalCenterFrequency)))
   const startBin = computed(() => {
     const startBin = binFor(toValue(signalCenterFrequency) - signalTestHalfBandwidthRef.value)
-    return Math.max(0, Math.min(centerBin.value - 1, startBin.value))
+    return Math.max(0, Math.min(centerBin.value - 1, startBin))
   })
   const endBin = computed(() => {
     const endBin = binFor(toValue(signalCenterFrequency) + signalTestHalfBandwidthRef.value)
-    return Math.min(frequencyBinCount.value - 1, Math.max(centerBin.value + 1, endBin.value))
+    return Math.min(frequencyBinCount.value - 1, Math.max(centerBin.value + 1, endBin))
   })
 
   const snr = computed(() => {
@@ -34,8 +34,8 @@ export default function useSignalDetector(
 
   return {
     testBand: computed(() => ({
-      low: forBin(startBin).value.low,
-      high: forBin(endBin).value.high
+      low: forBin(startBin.value).low,
+      high: forBin(endBin.value).high
     })),
     snr,
     detected

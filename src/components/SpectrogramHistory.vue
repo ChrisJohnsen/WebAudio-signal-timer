@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { cubeYfColor } from '@/assets/cubeYF'
+import { cubeYfColor, colorCount as cubeYFColorCount } from '@/assets/cubeYF'
 import { useBins, useFFTPixelBins } from '@/composables/useBins'
 import { useCssVar, useResizeObserver } from '@vueuse/core'
-import { computed, onMounted, ref, toRef, watchEffect, type PropType } from 'vue'
+import { computed, effectScope, onMounted, ref, toRef, watchEffect, type PropType } from 'vue'
 
 const props = defineProps({
   decibelRange: {
@@ -66,17 +66,17 @@ onMounted(() => {
 const bgColor = useCssVar('--bg-color', document.body)
 const textColor = useCssVar('--text-color', document.body)
 
+const startPixelForColor = useBins(canvasWidth, 0, cubeYFColorCount - 1).binFor
+
 function drawLegend(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
   // power legend
   const powerLegendTop = 0
-  const colors = 256
-  const startPixelForColor = useBins(canvas.width, 0, colors - 1).binFor
-  for (let color = 0; color < colors; color++) {
-    const binStart = startPixelForColor(color).value
-    const binEnd = startPixelForColor(color + 1).value
+  for (let color = 0; color < cubeYFColorCount; color++) {
+    const binStart = startPixelForColor(color)
+    const binEnd = startPixelForColor(color + 1)
     ctx.fillStyle = cubeYfColor(color)
     ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
   }
@@ -126,9 +126,12 @@ function drawLegend(canvas: HTMLCanvasElement) {
     const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
     ctx.textBaseline = 'bottom'
     const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
-    const pixelForValue = useBins(ctx.canvas.width, min, max).binFor
+    const scope = effectScope()
+    const pixelForValue = scope.run(() => useBins(ctx.canvas.width, min, max).binFor)
+    scope.stop()
+    if (!pixelForValue) throw new Error('error while using EffectScope.run()')
     for (let value = firstValue; value <= max; value += span) {
-      const labelPosition = pixelForValue(value).value
+      const labelPosition = pixelForValue(value)
       ctx.fillRect(labelPosition, y, 1, height)
       ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
     }
@@ -182,7 +185,7 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
   let ultra = -Infinity
   for (let i = 0; i < rowData.length; i++) {
     const power = rowData[i]
-    const binPixels = pixelsForFrequencyBin(i).value
+    const binPixels = pixelsForFrequencyBin(i)
     if (binPixels.x + binPixels.width < oobWidth) {
       infra = Math.max(infra, power)
       continue
@@ -190,15 +193,15 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
       ultra = Math.max(ultra, power)
       continue
     }
-    ctx.fillStyle = cubeYfColor(colorIndexForPower(power).value)
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(power))
     ctx.fillRect(binPixels.x, headerHeight, binPixels.width, rowHeight)
   }
   if (isFinite(infra)) {
-    ctx.fillStyle = cubeYfColor(colorIndexForPower(infra).value)
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(infra))
     ctx.fillRect(0, headerHeight, oobWidth, rowHeight)
   }
   if (isFinite(ultra)) {
-    ctx.fillStyle = cubeYfColor(colorIndexForPower(ultra).value)
+    ctx.fillStyle = cubeYfColor(colorIndexForPower(ultra))
     ctx.fillRect(width - oobWidth, headerHeight, oobWidth, rowHeight)
   }
 }

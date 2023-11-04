@@ -259,6 +259,7 @@ const cubeYF: [number, number, number][] = [
   [209, 235, 91]
 ]
 export default cubeYF
+export const colorCount = cubeYF.length
 export function cubeYfColor(n: number) {
   const [r, g, b] = cubeYF[n]
   return `rgb(${r} ${g} ${b})`
