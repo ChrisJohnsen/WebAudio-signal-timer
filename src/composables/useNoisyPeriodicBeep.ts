@@ -1,6 +1,15 @@
 import { useTimeoutFn, type Stoppable } from '@vueuse/core'
 import gaussian from 'gaussian'
-import { computed, isRef, ref, toRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import {
+  computed,
+  isRef,
+  onScopeDispose,
+  ref,
+  toRef,
+  toValue,
+  watch,
+  type MaybeRefOrGetter
+} from 'vue'
 import useBeep from './useBeep'
 import useWhiteNoise from './useWhiteNoise'
 
@@ -66,6 +75,7 @@ export default function useNoisyPeriodicBeep(
     beeper.shutdown()
     gainNode.disconnect()
   }
+  onScopeDispose(shutdown)
 
   return { stop, node: gainNode, gainParam: gainNode.gain, shutdown }
 }

@@ -1,4 +1,4 @@
-import { readonly, ref, toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import { onScopeDispose, readonly, ref, toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 
 export default function useBeep(
   audioContext: BaseAudioContext,
@@ -26,15 +26,18 @@ export default function useBeep(
 
   const beeping = ref(false)
 
+  const shutdown = () => {
+    oscillator.stop()
+    oscillator.disconnect()
+    gain.disconnect()
+  }
+  onScopeDispose(shutdown)
+
   return {
     node: gain,
     beeping: readonly(beeping),
     beep: beep(audioContext, gain.gain, beeping),
-    shutdown: () => {
-      oscillator.stop()
-      oscillator.disconnect()
-      gain.disconnect()
-    }
+    shutdown
   }
 }
 

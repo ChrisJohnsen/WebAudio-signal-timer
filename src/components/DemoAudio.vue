@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import useNoisyPeriodicBeep from '@/composables/useNoisyPeriodicBeep'
-import { onMounted, onUnmounted, ref, toRef, watch } from 'vue'
+import { onMounted, ref, toRef, watch } from 'vue'
 
 const props = defineProps<{ audioContext: BaseAudioContext; active: boolean }>()
 const emit = defineEmits<{ source: [node: AudioNode] }>()
@@ -41,7 +41,6 @@ onMounted(() =>
     { immediate: true }
   )
 )
-onUnmounted(() => periodic?.shutdown())
 </script>
 
 <template>

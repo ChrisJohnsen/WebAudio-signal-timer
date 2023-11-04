@@ -1,4 +1,4 @@
-import { toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import { onScopeDispose, toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 
 export default function useWhiteNoise(
   audioContext: BaseAudioContext,
@@ -13,14 +13,18 @@ export default function useWhiteNoise(
     gainNode.gain.setTargetAtTime(gain, audioContext.currentTime, 0.02)
   })
   noiseNode.start()
+
+  const shutdown = () => {
+    noiseNode.stop()
+    noiseNode.disconnect()
+    gainNode.disconnect()
+  }
+  onScopeDispose(shutdown)
+
   return {
     gain: gainRef,
     node: gainNode,
-    shutdown: () => {
-      noiseNode.stop()
-      noiseNode.disconnect()
-      gainNode.disconnect()
-    }
+    shutdown
   }
 }
 

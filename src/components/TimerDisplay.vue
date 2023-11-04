@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Event } from '@/composables/useTimingRecovery'
 import { useIntervalFn, useTimeoutFn } from '@vueuse/core'
-import { computed, ref, toRef, watch } from 'vue'
+import { computed, onUnmounted, ref, toRef, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -55,6 +55,8 @@ function t(secs: number) {
   const hs = atLeastAnHour ? h.toString() + 'h' : ''
   return (neg ? '-' : '') + hs + ms + ss
 }
+
+onUnmounted(() => timerUpdater.pause())
 </script>
 
 <template>

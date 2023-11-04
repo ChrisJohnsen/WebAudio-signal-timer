@@ -1,6 +1,7 @@
 import { useIntervalFn } from '@vueuse/core'
 import {
   computed,
+  onScopeDispose,
   readonly,
   ref,
   shallowReadonly,
@@ -81,6 +82,18 @@ export default function useAnalyser(
     },
     { immediate: true }
   )
+
+  onScopeDispose(() => {
+    samplingPauser.pause()
+    if (currentAnalyser)
+      for (const input of inputsRef.value)
+        try {
+          input.disconnect(currentAnalyser)
+        } catch (e) {
+          void e
+        }
+    currentAnalyser = undefined
+  })
 
   return {
     sampleRate: shallowReadonly(sampleRateRef),
