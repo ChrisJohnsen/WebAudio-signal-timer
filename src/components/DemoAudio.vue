@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import useNoisyPeriodicBeep from '@/composables/useNoisyPeriodicBeep'
+import { throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
 import { onMounted, ref, toRef, watch } from 'vue'
 
 const props = defineProps<{ audioContext: BaseAudioContext; active: boolean }>()
 const emit = defineEmits<{ source: [node: AudioNode] }>()
 
 const snr_dB = ref(30)
-const gain = ref(1)
 const frequency = ref(440)
 const duration = ref(1)
 const durationSD = ref(0.2)
@@ -20,7 +20,13 @@ watch(toRef(props, 'active'), (a) => {
   else periodic?.stop.stop()
 })
 
-onMounted(() =>
+onMounted(() => {
+  useStorage('demo SNR (dB)', snr_dB, localStorage, storageOptions())
+  useStorage('demo frequency', frequency, localStorage, storageOptions())
+  useStorage('demo duration', duration, localStorage, storageOptions())
+  useStorage('demo duration stddev', durationSD, localStorage, storageOptions())
+  useStorage('demo period', period, localStorage, storageOptions())
+  useStorage('demo period stddev', periodSD, localStorage, storageOptions())
   watch(
     toRef(props, 'audioContext'),
     (ctx) => {
@@ -34,22 +40,27 @@ onMounted(() =>
           duration: { mean: duration, stddev: durationSD },
           period: { mean: period, stddev: periodSD }
         },
-        gain
+        1
       )
       emit('source', periodic.node)
     },
     { immediate: true }
   )
-)
+
+  function storageOptions(): UseStorageOptions<number> {
+    return {
+      mergeDefaults: (value: number, defaults: number) =>
+        isFinite(value) && 0 < value ? value : defaults,
+      eventFilter: throttleFilter(100),
+      listenToStorageChanges: false
+    }
+  }
+})
 </script>
 
 <template>
   <fieldset>
     <legend>Demo Audio Settings</legend>
-    <div>
-      <label for="demo-gain">Gain</label
-      ><input id="demo-gain" type="number" v-model="gain" min="0" />
-    </div>
     <div>
       <label for="beep-frequency">Beep Frequency (Hz):</label
       ><input id="beep-frequency" type="number" v-model="frequency" min="1" />

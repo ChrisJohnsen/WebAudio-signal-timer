@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
 import {
   computed,
   nextTick,
@@ -90,6 +91,8 @@ onMounted(() => {
     running.value = audioContext ? audioContext.state == 'running' : false
   })
 
+  // monitor
+  useStorage('monitor gain', monitorGain, localStorage, storageOptions())
   const monitor = new GainNode(audioContext, { gain: monitorGain.value })
   watch(monitorGain, (gain) =>
     monitor.gain.setTargetAtTime(gain, monitor.context.currentTime, 0.02)
@@ -106,6 +109,9 @@ onMounted(() => {
   monitor.connect(audioContext.destination)
 
   // signal detection
+  useStorage('detector central frequency', detectorFrequency, localStorage, storageOptions())
+  useStorage('detector bandwidth', detectorBandwidth, localStorage, storageOptions())
+  useStorage('detector SNR', detectorSNR, localStorage, storageOptions())
   const detector = useSignalDetector(
     sampleRate,
     frequencyBinCount,
@@ -138,6 +144,14 @@ onMounted(() => {
   watch(timing.period, (period) => (recoveredPeriod.value = period), { immediate: true })
   watch(timing.duration, (duration) => (recoveredDuration.value = duration), { immediate: true })
   watch(timing.next, (next) => (predictedNext.value = next), { immediate: true })
+
+  function storageOptions(): UseStorageOptions<number> {
+    return {
+      mergeDefaults: (value, defaults) => (isFinite(value) && 0 < value ? value : defaults),
+      eventFilter: throttleFilter(100),
+      listenToStorageChanges: false
+    }
+  }
 })
 onUnmounted(() => {
   if (running.value) stop()

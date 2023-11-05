@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(
@@ -71,6 +72,11 @@ watch([automaticRef, autoReportingPeriod], ([a, arp]) => a && (reportingPeriod.v
 const autoEl = ref<HTMLInputElement | null>(null)
 const manualEl = ref<HTMLInputElement | null>(null)
 onMounted(() => {
+  useStorage('expected period', period, localStorage, storageOptions(mergeNumberMaybeNullStr))
+  useStorage('expected duration', duration, localStorage, storageOptions(mergeNumberMaybeNullStr))
+  useStorage('reporting period', reportingPeriod, localStorage, storageOptions(mergeNumberMaybeStr))
+  useStorage('automatic reporting period', automatic, localStorage, storageOptions())
+
   if (autoEl.value) autoEl.value.checked = automaticRef.value
 
   watch(
@@ -86,6 +92,25 @@ onMounted(() => {
     },
     { immediate: true }
   )
+
+  function storageOptions<T>(mergeDefaults?: (value: T, defaults: T) => T): UseStorageOptions<T> {
+    return {
+      mergeDefaults,
+      eventFilter: throttleFilter(100),
+      listenToStorageChanges: false
+    }
+  }
+  function mergeNumberMaybeNullStr(
+    value: string | number | undefined,
+    defaults: string | number | undefined
+  ): string | number | undefined {
+    if (typeof value == 'string') value = parseFloat(value)
+    return typeof value == 'number' && isFinite(value) ? value : defaults
+  }
+  function mergeNumberMaybeStr(value: string | number, defaults: string | number): string | number {
+    if (typeof value == 'string') value = parseFloat(value)
+    return isFinite(value) ? value : defaults
+  }
 })
 
 const warnings = computed(() => {
