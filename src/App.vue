@@ -71,7 +71,7 @@ const recoveredDuration = ref(NaN)
 const predictedNext = ref<Event | null>(null)
 
 const audioContext = new AudioContext() // this may generate a warning since this isn't triggered by a "user gesture"
-let resetTiming: () => void | undefined
+let resetTiming: () => void
 
 const startStop = () => {
   if (running.value) return stop()

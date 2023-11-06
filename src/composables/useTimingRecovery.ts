@@ -1,4 +1,13 @@
-import { computed, ref, toRef, toValue, watch, type MaybeRefOrGetter, type ShallowRef } from 'vue'
+import {
+  computed,
+  ref,
+  toRef,
+  toValue,
+  watch,
+  type ComputedRef,
+  type MaybeRefOrGetter,
+  type ShallowRef
+} from 'vue'
 
 export type Event = { type: 'start' | 'stop'; date: number } // Date instead of number?
 
@@ -6,7 +15,12 @@ export default function useTimingRecovery(
   event: Readonly<ShallowRef<Event | null>>,
   expectedPeriod?: MaybeRefOrGetter<number | undefined>,
   expectedDuration?: MaybeRefOrGetter<number | undefined>
-) {
+): {
+  period: ComputedRef<number>
+  duration: ComputedRef<number>
+  next: ComputedRef<Event | null>
+  reset: () => void
+} {
   const recovery = new TimingRecovery(
     [],
     toMilliValue(expectedPeriod),
@@ -27,7 +41,7 @@ export default function useTimingRecovery(
     update(recovery.setExpected(toMilli(period), toMilli(duration)))
   )
 
-  return { reset, period, duration, next }
+  return { period, duration, next, reset }
 
   function toMilli(secs: number | undefined) {
     return secs && 1000 * secs
