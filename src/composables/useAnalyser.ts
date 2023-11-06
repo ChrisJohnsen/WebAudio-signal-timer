@@ -41,7 +41,7 @@ export default function useAnalyser(
   const samplingPauser = useIntervalFn(
     () => {
       if (!currentAnalyser) {
-        samplingPauser.pause()
+        pauser.pause()
         return
       }
 
@@ -60,6 +60,13 @@ export default function useAnalyser(
     collectionArray.fill(-Infinity)
     lastPublish = now
   }
+  const pauser = {
+    pause: () => samplingPauser.pause(),
+    resume: () => {
+      collectionArray.fill(-Infinity)
+      samplingPauser.resume()
+    }
+  }
 
   watch(
     inputsRef,
@@ -76,7 +83,7 @@ export default function useAnalyser(
       }
 
       const analyser = getAnalyser(newInputs[0]?.context)
-      samplingPauser.resume()
+      pauser.resume()
 
       if (analyser) for (const input of newInputs) input.connect(analyser)
     },
@@ -84,7 +91,7 @@ export default function useAnalyser(
   )
 
   onScopeDispose(() => {
-    samplingPauser.pause()
+    pauser.pause()
     if (currentAnalyser)
       for (const input of inputsRef.value)
         try {
@@ -113,8 +120,8 @@ export default function useAnalyser(
     sampleRateRef.value = audioContext.sampleRate
 
     audioContext.addEventListener('statechange', () => {
-      if (audioContext.state == 'running') samplingPauser.resume()
-      else samplingPauser.pause()
+      if (audioContext.state == 'running') pauser.resume()
+      else pauser.pause()
     })
 
     return (currentAnalyser = analyser)

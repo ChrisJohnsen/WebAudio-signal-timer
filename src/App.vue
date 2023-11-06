@@ -89,6 +89,7 @@ onMounted(() => {
   audioContext.suspend() // wait for resume, don't just start when the first source node is started
   audioContext.addEventListener('statechange', () => {
     running.value = audioContext ? audioContext.state == 'running' : false
+    if (!running.value) event.value = null
   })
 
   // monitor
