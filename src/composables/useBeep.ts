@@ -1,49 +1,78 @@
-import { onScopeDispose, readonly, ref, toRef, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import {
+  onScopeDispose,
+  readonly,
+  ref,
+  shallowReadonly,
+  shallowRef,
+  toRef,
+  watch,
+  type MaybeRefOrGetter,
+  type Ref,
+  type ShallowRef
+} from 'vue'
 
 export default function useBeep(
-  audioContext: BaseAudioContext,
+  audioContext: MaybeRefOrGetter<BaseAudioContext>,
   frequency: MaybeRefOrGetter<number>
 ): {
-  node: AudioNode
+  node: Readonly<ShallowRef<AudioNode>>
   beeping: Readonly<Ref<boolean>>
   beep: (duration?: number, onDone?: () => void) => void
   shutdown: () => void
 } {
-  const frequencyRef = toRef(frequency)
-  const oscillator = new OscillatorNode(audioContext, {
-    type: 'sine',
-    frequency: frequencyRef.value
+  const audioContextRef = toRef(audioContext),
+    frequencyRef = toRef(frequency)
+  const state = setupBeepNodes(audioContextRef.value, frequencyRef.value)
+
+  watch(audioContextRef, (audioContext) => {
+    stopBeepNodes(state)
+    setupBeepNodes(audioContext, frequencyRef.value, state)
   })
 
   const ftc = 0.02
   watch(frequencyRef, (newFrequency) => {
-    oscillator.frequency.setTargetAtTime(newFrequency, audioContext.currentTime, ftc)
+    const {
+      frequency,
+      context: { currentTime }
+    } = state.oscillatorNode
+    frequency.setTargetAtTime(newFrequency, currentTime, ftc)
   })
-
-  const gain = new GainNode(audioContext, { gain: 0 })
-  oscillator.connect(gain)
-  oscillator.start()
 
   const beeping = ref(false)
 
-  const shutdown = () => {
-    oscillator.stop()
-    oscillator.disconnect()
-    gain.disconnect()
-  }
+  const shutdown = () => stopBeepNodes(state)
   onScopeDispose(shutdown)
 
   return {
-    node: gain,
+    node: shallowReadonly(state.gainNodeRef),
     beeping: readonly(beeping),
-    beep: beep(audioContext, gain.gain, beeping),
+    beep: beep(state.gainNodeRef, beeping),
     shutdown
   }
 }
+type State = { oscillatorNode: OscillatorNode; gainNodeRef: ShallowRef<GainNode> }
+function setupBeepNodes(audioContext: BaseAudioContext, frequency: number, state?: State): State {
+  const oscillatorNode = new OscillatorNode(audioContext, { type: 'sine', frequency })
+
+  const gainNode = new GainNode(audioContext, { gain: 0 })
+  oscillatorNode.connect(gainNode)
+  oscillatorNode.start()
+
+  if (state) {
+    state.oscillatorNode = oscillatorNode
+    state.gainNodeRef.value = gainNode
+  } else state = { oscillatorNode: oscillatorNode, gainNodeRef: shallowRef(gainNode) }
+
+  return state
+}
+function stopBeepNodes(state: State) {
+  state.oscillatorNode.stop()
+  state.oscillatorNode.disconnect()
+  state.gainNodeRef.value.disconnect()
+}
 
 function beep(
-  audioContext: BaseAudioContext,
-  gp: AudioParam,
+  { value: { context: audioContext, gain: gp } }: ShallowRef<GainNode>,
   beeping: Ref<boolean>
 ): (duration?: number, onDone?: () => void) => void {
   return (duration = 1, onDone) => {

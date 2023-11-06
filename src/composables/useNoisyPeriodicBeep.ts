@@ -5,16 +5,19 @@ import {
   isRef,
   onScopeDispose,
   ref,
+  shallowReadonly,
+  shallowRef,
   toRef,
   toValue,
   watch,
-  type MaybeRefOrGetter
+  type MaybeRefOrGetter,
+  type ShallowRef
 } from 'vue'
 import useBeep from './useBeep'
 import useWhiteNoise from './useWhiteNoise'
 
 export default function useNoisyPeriodicBeep(
-  audioContext: BaseAudioContext,
+  audioContext: MaybeRefOrGetter<BaseAudioContext>,
   snr_dB: MaybeRefOrGetter<number>,
   beep: {
     frequency: MaybeRefOrGetter<number>
@@ -24,12 +27,10 @@ export default function useNoisyPeriodicBeep(
     period:
       | MaybeRefOrGetter<number>
       | { mean: MaybeRefOrGetter<number>; stddev: MaybeRefOrGetter<number> }
-  },
-  gain: MaybeRefOrGetter<number> = 1
+  }
 ): {
   stop: Stoppable
-  node: AudioNode
-  gainParam: AudioParam
+  node: Readonly<ShallowRef<AudioNode>>
   shutdown: () => void
 } {
   const snr_dB_ref = toRef(snr_dB)
@@ -47,12 +48,22 @@ export default function useNoisyPeriodicBeep(
   )
   const beeper = useBeep(audioContext, beep.frequency)
 
-  const gainRef = toRef(gain)
-  const gainNode = new GainNode(audioContext, { gain: gainRef.value })
-  watch(gainRef, (newGain) => gainNode.gain.setTargetAtTime(newGain, audioContext.currentTime, 0.2))
+  const gainNode = shallowRef(undefined as unknown as GainNode)
+  watch(
+    [noise.node, beeper.node],
+    ([noise, beeper], [oldNoise, oldBeeper]) => {
+      if (oldNoise && oldNoise != noise) oldNoise.disconnect()
+      if (oldBeeper && oldBeeper != beeper) oldBeeper.disconnect()
 
-  noise.node.connect(gainNode)
-  beeper.node.connect(gainNode)
+      const newGain = new GainNode(noise.context, { gain: 1 }) // just a node to mix the noise and beep nodes
+
+      noise.connect(newGain)
+      beeper.connect(newGain)
+
+      gainNode.value = newGain
+    },
+    { immediate: true }
+  )
 
   const getRandomPeriod = computedGetterForRandomValue(beep.period)
   const period = ref(getRandomPeriod.value())
@@ -69,15 +80,15 @@ export default function useNoisyPeriodicBeep(
 
   const shutdown = () => {
     stop.stop()
-    noise.node.disconnect()
+    noise.node.value.disconnect()
     noise.shutdown()
-    beeper.node.disconnect()
+    beeper.node.value.disconnect()
     beeper.shutdown()
-    gainNode.disconnect()
+    gainNode.value.disconnect()
   }
   onScopeDispose(shutdown)
 
-  return { stop, node: gainNode, gainParam: gainNode.gain, shutdown }
+  return { stop, node: shallowReadonly(gainNode), shutdown }
 }
 
 function computedGetterForRandomValue(

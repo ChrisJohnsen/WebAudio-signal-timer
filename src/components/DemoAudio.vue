@@ -13,13 +13,6 @@ const durationSD = ref(0.2)
 const period = ref(5)
 const periodSD = ref(1)
 
-let periodic: ReturnType<typeof useNoisyPeriodicBeep> | undefined
-
-watch(toRef(props, 'active'), (a) => {
-  if (a) periodic?.stop.start()
-  else periodic?.stop.stop()
-})
-
 onMounted(() => {
   useStorage('demo SNR (dB)', snr_dB, localStorage, storageOptions())
   useStorage('demo frequency', frequency, localStorage, storageOptions())
@@ -27,25 +20,19 @@ onMounted(() => {
   useStorage('demo duration stddev', durationSD, localStorage, storageOptions())
   useStorage('demo period', period, localStorage, storageOptions())
   useStorage('demo period stddev', periodSD, localStorage, storageOptions())
-  watch(
-    toRef(props, 'audioContext'),
-    (ctx) => {
-      periodic?.shutdown()
 
-      periodic = useNoisyPeriodicBeep(
-        ctx,
-        snr_dB,
-        {
-          frequency,
-          duration: { mean: duration, stddev: durationSD },
-          period: { mean: period, stddev: periodSD }
-        },
-        1
-      )
-      emit('source', periodic.node)
-    },
-    { immediate: true }
-  )
+  const periodic = useNoisyPeriodicBeep(toRef(props, 'audioContext'), snr_dB, {
+    frequency,
+    duration: { mean: duration, stddev: durationSD },
+    period: { mean: period, stddev: periodSD }
+  })
+
+  watch(periodic.node, (node) => emit('source', node), { immediate: true })
+
+  watch(toRef(props, 'active'), (a) => {
+    if (a) periodic.stop.start()
+    else periodic.stop.stop()
+  })
 
   function storageOptions(): UseStorageOptions<number> {
     return {
