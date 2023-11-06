@@ -24,7 +24,7 @@ watch([toRef(props, 'next'), toRef(props, 'doUpdates')], ([next, doUpdates]) => 
   if (!doUpdates || !next) return
   const r = (next.date - Date.now()) % 1000
   const w = r >= 0 ? r : r + 1000
-  useTimeoutFn(() => timerUpdater.resume(), w)
+  useTimeoutFn(() => timerUpdater.resume(), w) // useTImeoutFn doesn't create effects?; so it should be safe to use inside watch
 })
 
 const remainingToNext = computed(() => {

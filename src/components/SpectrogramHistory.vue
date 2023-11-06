@@ -52,13 +52,13 @@ const frequencyLabelsHeight = 10
 const headerHeight = powerLegendHeight + frequencyLabelsHeight
 
 onMounted(() => {
-  watchEffect(() => updateSpectrogram(props.sampleRate, props.data))
+  watchEffect(() => updateSpectrogram(props.sampleRate, props.data)) // should not create any effects
 
   useResizeObserver(canvasRef, (entries) => {
     const canvas = entries[0].target
     if (!(canvas instanceof HTMLCanvasElement)) return
     canvasWidth.value = entries[0].contentRect.width
-    drawLegend(canvas)
+    drawLegend(canvas) // creates temporary effects, but also encapsulates them
   })
 })
 
