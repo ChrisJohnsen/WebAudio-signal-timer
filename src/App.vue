@@ -7,6 +7,7 @@ import {
   onUnmounted,
   reactive,
   ref,
+  toRef,
   watch,
   watchEffect,
   type Ref
@@ -146,9 +147,29 @@ onMounted(() => {
   watch(timing.duration, (duration) => (recoveredDuration.value = duration), { immediate: true })
   watch(timing.next, (next) => (predictedNext.value = next), { immediate: true })
 
+  // spectrogram and spectrum levels settings
+  useStorage('spectrum min dB', toRef(dbRange, 'min'), localStorage, storageOptionsDecibel())
+  useStorage('spectrum max dB', toRef(dbRange, 'max'), localStorage, storageOptionsDecibel())
+  useStorage('spectrum min frequency', toRef(band, 'low'), localStorage, storageOptions())
+  useStorage('spectrum max frequency', toRef(band, 'high'), localStorage, storageOptionsHighFreq())
+
   function storageOptions(): UseStorageOptions<number> {
     return {
       mergeDefaults: (value, defaults) => (isFinite(value) && 0 < value ? value : defaults),
+      eventFilter: throttleFilter(100),
+      listenToStorageChanges: false
+    }
+  }
+  function storageOptionsDecibel(): UseStorageOptions<number> {
+    return {
+      mergeDefaults: (value, defaults) => (isFinite(value) ? value : defaults),
+      eventFilter: throttleFilter(100),
+      listenToStorageChanges: false
+    }
+  }
+  function storageOptionsHighFreq(): UseStorageOptions<number> {
+    return {
+      mergeDefaults: (value, defaults) => (!isNaN(value) && value >= 0 ? value : defaults),
       eventFilter: throttleFilter(100),
       listenToStorageChanges: false
     }

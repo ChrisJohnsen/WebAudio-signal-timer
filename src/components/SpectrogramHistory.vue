@@ -53,6 +53,11 @@ const frequencyLabelsHeight = 10
 const headerHeight = powerLegendHeight + frequencyLabelsHeight
 
 onMounted(() => {
+  watchEffect(() => {
+    const canvas = canvasRef.value
+    if (!canvas) return
+    drawLegend(canvas) // creates temporary effects, but also encapsulates them
+  })
   watchEffect(() => updateSpectrogram(props.sampleRate, props.data)) // should not create any effects
 
   useResizeObserver(canvasRef, (entries) => {
@@ -124,6 +129,7 @@ function drawLegend(canvas: HTMLCanvasElement) {
   ) {
     ctx.textBaseline = 'bottom'
     for (const { valueStep, value, pixelPosition: x, pixelSpan: width } of labelPositions(
+      // creates temporary effects, but also encapsulates them
       ctx.canvas.width,
       min,
       max
