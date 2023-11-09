@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { cubeYfColor, colorCount as cubeYFColorCount } from '@/assets/cubeYF'
 import { useBins, useFFTPixelBins } from '@/composables/useBins'
+import { labelPositions } from '@/labelPositions'
 import { useCssVar, useResizeObserver } from '@vueuse/core'
-import { computed, effectScope, onMounted, ref, toRef, watchEffect, type PropType } from 'vue'
+import { computed, onMounted, ref, toRef, watchEffect, type PropType } from 'vue'
 
 const props = defineProps({
   decibelRange: {
@@ -121,27 +122,14 @@ function drawLegend(canvas: HTMLCanvasElement) {
     max: number,
     label: (value: number, span: number) => string
   ) {
-    const range = max - min
-    const span = markerSpan(range)
-    const labelWidth = Math.trunc((ctx.canvas.width * span) / range) - 3
     ctx.textBaseline = 'bottom'
-    const firstValue = Math.ceil(min / span) * span // round min up to multiple of span
-    const scope = effectScope()
-    const pixelForValue = scope.run(() => useBins(ctx.canvas.width, min, max).binFor)
-    scope.stop()
-    if (!pixelForValue) throw new Error('error while using EffectScope.run()')
-    for (let value = firstValue; value <= max; value += span) {
-      const labelPosition = pixelForValue(value)
-      ctx.fillRect(labelPosition, y, 1, height)
-      ctx.fillText(`${label(value, span)}`, labelPosition + 2, y + height, labelWidth)
-    }
-
-    function markerSpan(range: number) {
-      const base = 10 ** Math.trunc(Math.log10(range))
-      const factor = range / base
-      if (factor >= 5) return 0.5 * base
-      else if (factor >= 2) return 0.2 * base
-      else return 0.1 * base
+    for (const { valueStep, value, pixelPosition: x, pixelSpan: width } of labelPositions(
+      ctx.canvas.width,
+      min,
+      max
+    )) {
+      ctx.fillRect(x, y, 1, height)
+      ctx.fillText(`${label(value, valueStep)}`, x + 2, y + height, width)
     }
   }
 }
@@ -186,15 +174,15 @@ function updateSpectrogram(sampleRate: number, rowData: Float32Array) {
   for (let i = 0; i < rowData.length; i++) {
     const power = rowData[i]
     const binPixels = pixelsForFrequencyBin(i)
-    if (binPixels.x + binPixels.width < oobWidth) {
+    if (binPixels.start + binPixels.count < oobWidth) {
       infra = Math.max(infra, power)
       continue
-    } else if (binPixels.x > width - oobWidth) {
+    } else if (binPixels.start > width - oobWidth) {
       ultra = Math.max(ultra, power)
       continue
     }
     ctx.fillStyle = cubeYfColor(colorIndexForPower(power))
-    ctx.fillRect(binPixels.x, headerHeight, binPixels.width, rowHeight)
+    ctx.fillRect(binPixels.start, headerHeight, binPixels.count, rowHeight)
   }
   if (isFinite(infra)) {
     ctx.fillStyle = cubeYfColor(colorIndexForPower(infra))

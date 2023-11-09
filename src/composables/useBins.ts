@@ -61,6 +61,6 @@ export function useFFTPixelBins(
     const { low: startFrequency, high: stopFrequency } = bandForBin(frequencyBin)
     const startPixel = pixelForFrequency(startFrequency)
     const stopPixel = pixelForFrequency(stopFrequency)
-    return { x: startPixel, width: stopPixel - startPixel }
+    return { start: startPixel, count: stopPixel - startPixel }
   }
 }

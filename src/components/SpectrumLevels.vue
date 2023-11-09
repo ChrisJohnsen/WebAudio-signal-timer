@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { cubeYfColor } from '@/assets/cubeYF'
 import { useBins, useFFTPixelBins } from '@/composables/useBins'
+import { labelPositions } from '@/labelPositions'
 import { useCssVar } from '@vueuse/core'
 import { useResizeObserver } from '@vueuse/core/index.cjs'
 import { computed, onMounted, ref, toRef, watchEffect, type PropType, type Ref } from 'vue'
@@ -60,6 +61,7 @@ onMounted(() => {
 
 // CSS "variables" XXX eventually react to dark mode, too
 const bgColor = useCssVar('--bg-color', document.body)
+const textColor = useCssVar('--text-color', document.body)
 
 const colorIndexForPower = useBins(
   256,
@@ -96,14 +98,14 @@ function updateSpectrum() {
     const colorIndex = colorIndexForPower(power)
     const barHeight = colorIndex + 1
     const bar = pixelsForFrequencyBin(i)
-    if (bar.x < 0) continue
-    if (bar.x + bar.width > width) break
+    if (bar.start < 0) continue
+    if (bar.start + bar.count > width) break
     if (power > max.power) {
       max.power = power
-      max.bar = { ...bar, y: height - barHeight, height: barHeight }
+      max.bar = { x: bar.start, width: bar.count, y: height - barHeight, height: barHeight }
     }
     ctx.fillStyle = cubeYfColor(colorIndex)
-    ctx.fillRect(bar.x, height - barHeight, bar.width, barHeight)
+    ctx.fillRect(bar.start, height - barHeight, bar.count, barHeight)
   }
 
   // highlight peak level from displayed band
@@ -112,11 +114,38 @@ function updateSpectrum() {
     ctx.fillStyle = 'magenta'
     ctx.fillRect(bar.x, bar.y, bar.width, Math.min(10, bar.height))
   }
+
+  drawLines(ctx)
+}
+
+function drawLines(ctx: CanvasRenderingContext2D) {
+  const { width, height } = ctx.canvas
+
+  const labelHeight = 10
+  const labelWidth = 50
+  ctx.fillStyle = textColor.value
+  ctx.font = `${labelHeight}px sans-serif`
+  ctx.textBaseline = 'bottom'
+  for (const { value, valueStep, pixelPosition: yy, pixelSpan: h } of labelPositions(
+    height,
+    props.decibelRange.min,
+    props.decibelRange.max
+  )) {
+    const y = height - yy // canvas top-to-bottom goes 0-to-height, which is reversed from normal plotting
+    if (y < labelHeight) continue // don't draw line or label if label would extend beyond top
+    ctx.fillRect(0, y, width, 1)
+    ctx.fillText(
+      (valueStep >= 1 ? String(Math.round(value)) : value.toFixed(2)) + 'dB',
+      0,
+      y,
+      labelWidth
+    )
+  }
 }
 </script>
 
 <template>
-  <canvas ref="canvasRef" height="256" :width="canvasWidth">FFT levels</canvas>
+  <canvas ref="canvasRef" height="300" :width="canvasWidth">FFT levels</canvas>
 </template>
 
 <style scoped>
