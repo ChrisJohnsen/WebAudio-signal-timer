@@ -1,4 +1,14 @@
-import { computed, toRef, toValue, type DeepReadonly, type MaybeRefOrGetter, type Ref } from 'vue'
+import {
+  computed,
+  readonly,
+  ref,
+  toRef,
+  toValue,
+  watch,
+  type DeepReadonly,
+  type MaybeRefOrGetter,
+  type Ref
+} from 'vue'
 import { useFFTBins } from './useBins'
 
 export default function useSignalDetector(
@@ -24,12 +34,23 @@ export default function useSignalDetector(
     return Math.min(frequencyBinCount.value - 1, Math.max(centerBin.value + 1, endBin))
   })
 
-  const snr = computed(() => {
-    const otherBins = Array.from(frequencyData.value) // "other" starts with all, but we splice out the test bins
-    const testBins = otherBins.splice(startBin.value, endBin.value + 1 - startBin.value)
+  const peakSignal = ref(-Infinity)
+  const signal = ref(-Infinity)
+  const noise = ref(-Infinity)
+  watch(
+    frequencyData,
+    (frequencyData) => {
+      const otherBins = Array.from(frequencyData) // "other" starts with all, but we splice out the test bins
+      const testBins = otherBins.splice(startBin.value, endBin.value + 1 - startBin.value)
 
-    return dBAverage(testBins) - dBAverage(otherBins)
-  })
+      peakSignal.value = testBins.reduce((m, p) => Math.max(m, p), -Infinity)
+      signal.value = dBAverage(testBins)
+      noise.value = dBAverage(otherBins)
+    },
+    { immediate: true }
+  )
+
+  const snr = computed(() => signal.value - noise.value)
   const detected = computed(() => snr.value > toValue(detectionSNR))
 
   return {
@@ -38,6 +59,9 @@ export default function useSignalDetector(
       high: forBin(endBin.value).high
     })),
     snr,
+    peakSignal: readonly(peakSignal),
+    signal: readonly(signal),
+    noise: readonly(noise),
     detected
   }
 }

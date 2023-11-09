@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { cubeYfColor } from '@/assets/cubeYF'
+import { cubeYfColor, colorCount as cubeYFColorCount } from '@/assets/cubeYF'
 import { useBins, useFFTPixelBins } from '@/composables/useBins'
 import { labelPositions } from '@/labelPositions'
 import { useCssVar } from '@vueuse/core'
@@ -48,12 +48,15 @@ const frequencies = computed(() => {
 
 const canvasRef: Ref<HTMLCanvasElement | null> = ref(null)
 const canvasWidth = ref(100)
+const canvasHeight = ref(100)
 
 onMounted(() => {
   useResizeObserver(canvasRef, (entries) => {
     const canvas = entries[0].target
     if (!(canvas instanceof HTMLCanvasElement)) return
-    canvasWidth.value = entries[0].contentRect.width
+    canvas.width = entries[0].contentRect.width // set canvas-pixel width to CSS width
+    canvasWidth.value = canvas.width
+    canvasHeight.value = canvas.height // canvas-pixel height, not CSS height
   })
 
   watchEffect(updateSpectrum)
@@ -64,7 +67,12 @@ const bgColor = useCssVar('--bg-color', document.body)
 const textColor = useCssVar('--text-color', document.body)
 
 const colorIndexForPower = useBins(
-  256,
+  cubeYFColorCount,
+  () => props.decibelRange.min,
+  () => props.decibelRange.max
+).binFor
+const pixelForPower = useBins(
+  canvasHeight,
   () => props.decibelRange.min,
   () => props.decibelRange.max
 ).binFor
@@ -96,7 +104,7 @@ function updateSpectrum() {
   for (let i = 0; i < props.frequencyBinCount; i++) {
     const power = data[i]
     const colorIndex = colorIndexForPower(power)
-    const barHeight = colorIndex + 1
+    const barHeight = pixelForPower(power)
     const bar = pixelsForFrequencyBin(i)
     if (bar.start < 0) continue
     if (bar.start + bar.count > width) break
@@ -126,7 +134,7 @@ function drawLines(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = textColor.value
   ctx.font = `${labelHeight}px sans-serif`
   ctx.textBaseline = 'bottom'
-  for (const { value, valueStep, pixelPosition: yy, pixelSpan: h } of labelPositions(
+  for (const { value, valueStep, pixelPosition: yy } of labelPositions(
     height,
     props.decibelRange.min,
     props.decibelRange.max

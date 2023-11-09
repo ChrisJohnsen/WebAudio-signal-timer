@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
+import { syncRef, throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
 import {
   computed,
   nextTick,
@@ -46,6 +46,9 @@ const detectorFrequency = ref(440)
 const detectorBandwidth = ref(400)
 const detectorSNR = ref(6)
 const testBand = ref({ low: 0, high: sampleRate.value / 2 })
+const detectedPeakSignal = ref(-Infinity)
+const detectedSignal = ref(-Infinity)
+const detectedNoise = ref(-Infinity)
 
 // signal log
 const signalLogRef: Ref<HTMLTextAreaElement | null> = ref(null)
@@ -123,9 +126,16 @@ onMounted(() => {
     detectorSNR
   )
   watchEffect(() => (testBand.value = detector.testBand.value))
+  syncRef(detector.peakSignal, detectedPeakSignal, { direction: 'ltr' })
+  syncRef(detector.signal, detectedSignal, { direction: 'ltr' })
+  syncRef(detector.noise, detectedNoise, { direction: 'ltr' })
   watch(detector.detected, (detected) => {
     const which = detected ? 'started' : 'stopped'
-    signalLog.value += `signal ${which} (${detector.snr.value.toFixed(1)}) ${new Date()}\n`
+    signalLog.value += `signal ${which} (${detector.signal.value.toFixed(
+      1
+    )}dB - ${detector.noise.value.toFixed(1)}dB = ${detector.snr.value.toFixed(
+      1
+    )}dB SNR) ${new Date()}\n`
   })
   watch(signalLog, () => {
     const textarea = signalLogRef.value
@@ -220,7 +230,13 @@ onUnmounted(() => {
       :duration="recoveredDuration"
       :next="predictedNext"
     />
-    <textarea ref="signalLogRef" :readonly="true" v-text="signalLog" cols="80" rows="10"></textarea>
+    <textarea
+      ref="signalLogRef"
+      :readonly="true"
+      v-text="signalLog"
+      cols="110"
+      rows="10"
+    ></textarea>
     <fieldset>
       <legend>Signal Detection Settings</legend>
       <div>
@@ -243,6 +259,14 @@ onUnmounted(() => {
       </div>
     </fieldset>
     Signal Detection Band:
+    <br />
+    Peak: {{ detectedPeakSignal.toFixed(1) }}dB
+    <br />
+    Average Inside Band: {{ detectedSignal.toFixed(1) }}dB Average Outside Band:
+    {{ detectedNoise.toFixed(1) }}dB
+    <br />
+    inside-to-outside ratio: {{ (detectedSignal - detectedNoise).toFixed(1) }}dB
+    <br />
     <SpectrumLevels
       :decibel-range="dbRange"
       :band="testBand"
