@@ -134,12 +134,12 @@ function drawLines(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = textColor.value
   ctx.font = `${labelHeight}px sans-serif`
   ctx.textBaseline = 'bottom'
-  for (const { value, valueStep, pixelPosition: yy } of labelPositions(
+  for (const { value, valueStep, pixelPosition: y } of labelPositions(
     height,
     props.decibelRange.min,
-    props.decibelRange.max
+    props.decibelRange.max,
+    { reversePositions: true }
   )) {
-    const y = height - yy // canvas top-to-bottom goes 0-to-height, which is reversed from normal plotting
     if (y < labelHeight) continue // don't draw line or label if label would extend beyond top
     ctx.fillRect(0, y, width, 1)
     ctx.fillText(
