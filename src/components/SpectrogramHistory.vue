@@ -56,7 +56,7 @@ onMounted(() => {
   watchEffect(() => {
     const canvas = canvasRef.value
     if (!canvas) return
-    drawLegend(canvas) // creates temporary effects, but also encapsulates them
+    drawLegend(canvas)
   })
   watchEffect(() => updateSpectrogram(props.sampleRate, props.data)) // should not create any effects
 
@@ -64,7 +64,7 @@ onMounted(() => {
     const canvas = entries[0].target
     if (!(canvas instanceof HTMLCanvasElement)) return
     canvasWidth.value = entries[0].contentRect.width
-    drawLegend(canvas) // creates temporary effects, but also encapsulates them
+    drawLegend(canvas)
   })
 })
 
@@ -129,7 +129,6 @@ function drawLegend(canvas: HTMLCanvasElement) {
   ) {
     ctx.textBaseline = 'bottom'
     for (const { valueStep, value, pixelPosition: x, pixelSpan: width } of labelPositions(
-      // creates temporary effects, but also encapsulates them
       ctx.canvas.width,
       min,
       max

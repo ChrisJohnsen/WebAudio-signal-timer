@@ -1,14 +1,11 @@
-import { effectScope } from 'vue'
-import { useBins } from './composables/useBins'
+import { bins } from './composables/useBins'
 
 export function* labelPositions(pixels: number, valueMin: number, valueMax: number) {
   const range = valueMax - valueMin
   const valueStep = markerSpan(range)
   const pixelSpan = Math.trunc((pixels * valueStep) / range) - 3
   const firstValue = Math.ceil(valueMin / valueStep) * valueStep // round min up to multiple of span
-  const scope = effectScope()
-  const pixelForValue = scope.run(() => useBins(pixels, valueMin, valueMax).binFor)
-  scope.stop()
+  const pixelForValue = bins(pixels, valueMin, valueMax).binFor
   if (!pixelForValue) throw new Error('error while using EffectScope.run()')
   for (let value = firstValue; value <= valueMax; value += valueStep) {
     const pixelPosition = pixelForValue(value)
