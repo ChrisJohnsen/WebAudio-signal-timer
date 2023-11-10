@@ -12,7 +12,7 @@ export function* labelPositions(
   const { reversePositions: reverse = false } = options
   const range = valueMax - valueMin
   const valueStep = markerSpan(range)
-  const pixelSpan = Math.trunc((pixels * valueStep) / range) - 3
+  const pixelSpan = Math.trunc((pixels * valueStep) / range)
   const firstValue = Math.ceil(valueMin / valueStep) * valueStep // round min up to multiple of span
   const pixelForValue = bins(pixels, valueMin, valueMax).binFor
   if (!pixelForValue) throw new Error('error while using EffectScope.run()')

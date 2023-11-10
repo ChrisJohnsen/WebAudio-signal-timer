@@ -134,7 +134,7 @@ function drawLegend(canvas: HTMLCanvasElement) {
       max
     )) {
       ctx.fillRect(x, y, 1, height)
-      ctx.fillText(`${label(value, valueStep)}`, x + 2, y + height, width)
+      ctx.fillText(`${label(value, valueStep)}`, x + 2, y + height, width - 4)
     }
   }
 }
