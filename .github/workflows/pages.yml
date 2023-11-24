@@ -1,0 +1,150 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, pu]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+
+env:
+  # first always_build branch is rendered to Pages root; others are put in /{branch-name} subdirs
+
+  # even if the repo's default branch isn't going to be the Pages root, it should probably be built since its caches can be used when the workflow is triggered for other branches
+  always_build: main, pu
+
+jobs:
+  branch_info:
+    name: Convert ref list to matrix include
+    runs-on: ubuntu-latest
+    steps:
+      - id: default_branch
+        name: Get repo's default branch
+        run: |
+          default=$(gh api /repos/"$REPO" --jq .default_branch) # https://stackoverflow.com/a/28669194
+          printf 'Default branch: `%s`\n\n' "$default"
+          printf 'branch=%s\n' "$default" >> $GITHUB_OUTPUT
+        env:
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - id: get_info
+        name: Convert ref list to matrix include
+        run: |
+          info=`node --eval '
+            const bs = process.env.always_build.split(",")
+              .map(b => b.trim()).filter(b => b)
+            const trig = process.env.trigger?.trim()
+            if(trig) bs.push(trig)
+            const ubs = Array.from(new Set(bs).values())
+
+            const root = bs[0]
+            const def = process.env.default?.trim() ?? "main"
+            const required = b => b == root || b == trig
+            const cache = b => trig == def || b != trig
+            const subdir = b => b == root ? "" : b + "/"
+
+            const bi = ubs.map(b => ({
+              branch: b,
+              subdir: subdir(b),
+              required: required(b),
+              cache: cache(b)
+            }))
+            console.log(JSON.stringify(bi))
+          '`
+          printf 'Branch Info JSON: `%s`\n\n' "$info"
+          printf 'info=%s\n' "$info" >> $GITHUB_OUTPUT
+        env:
+          default: ${{ steps.default_branch.outputs.branch }}
+          trigger: ${{ github.ref_name }}
+    outputs:
+      info: ${{ steps.get_info.outputs.info }}
+
+  build:
+    name: Build ${{ matrix.branch }}
+    needs: branch_info
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.branch_info.outputs.info) }}
+      fail-fast: true
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ ! matrix.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Get SHA of HEAD
+        id: sha
+        run: printf 'sha=%s\n' "$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      - if: ${{ matrix.cache }}
+        name: Cache dist/
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: dist
+          key: built-pages-${{ matrix.subdir }}-${{ steps.sha.outputs.sha }}
+      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+        uses: pnpm/action-setup@v2
+      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+        run: pnpm install
+      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+        uses: actions/configure-pages@v3
+        id: pages
+      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+        run: |
+          pnpm build \
+            --outDir=dist/"$SUBDIR" \
+            --base="$BASE/$SUBDIR"
+        env:
+          BRANCH: ${{ matrix.branch }}
+          SUBDIR: ${{ matrix.subdir }}
+          BASE: ${{ steps.pages.outputs.base_path }}
+      - name: Create (partial) pages artifact for ${{ matrix.branch }}
+        run: (cd dist && tar czf - .) > pages.tar.gz
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pages-${{ matrix.branch }}
+          path: pages.tar.gz
+
+  deploy:
+    name: Merge and deploy builds
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Create dirs for artifact download and unpacking
+        run: |
+          mkdir "$RUNNER_TEMP"/separate
+          mkdir "$RUNNER_TEMP"/combined
+      - uses: actions/download-artifact@v3
+        with:
+          # no name => download all artifacts (just from the current workflow run?)
+          path: ${{ runner.temp }}/separate
+      - name: Merge pages artifacts
+        run: |
+          cd "$RUNNER_TEMP"/separate
+          for f in pages-*/*.tar.gz; do
+            (cd "$RUNNER_TEMP"/combined && tar xzf -) < $f
+          done
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: ${{ runner.temp }}/combined/
+      - uses: actions/deploy-pages@v2
+        id: deployment
+# spell-checker: words subdir subdirs
