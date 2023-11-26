@@ -1,8 +1,12 @@
 <script setup lang="ts">
+/// <reference types="vite-plugin-pwa/vue" />
+
 import { syncRef, throttleFilter, useStorage, type UseStorageOptions } from '@vueuse/core'
+import { useRegisterSW } from 'virtual:pwa-register/vue'
 import {
   computed,
   nextTick,
+  onBeforeMount,
   onMounted,
   onUnmounted,
   reactive,
@@ -20,6 +24,15 @@ import TimerDisplay from './components/TimerDisplay.vue'
 import useAnalyser from './composables/useAnalyser'
 import useSignalDetector from './composables/useSignalDetector'
 import useTimingRecovery, { type Event } from './composables/useTimingRecovery'
+
+const swUpdateReady = ref(false)
+let updateSW: undefined | (() => Promise<void>)
+
+onBeforeMount(() => {
+  const sw = useRegisterSW()
+  watch(sw.needRefresh, (nr) => (swUpdateReady.value = nr), { immediate: true })
+  updateSW = sw.updateServiceWorker
+})
 
 const running = ref(false)
 const startStopText = computed(() => (running.value ? 'Stop Timing' : 'Start Timing'))
@@ -192,7 +205,10 @@ onUnmounted(() => {
 
 <template>
   <header>Signal Timer</header>
-
+  <section v-if="swUpdateReady">
+    <strong>An update to this app is ready.</strong> <button @click="updateSW">Reload</button> to
+    activate.
+  </section>
   <main>
     <SourceSelector
       :audio-context="audioContext"

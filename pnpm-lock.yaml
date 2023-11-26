@@ -82,6 +82,9 @@ devDependencies:
   vue-tsc:
     specifier: ^1.8.19
     version: 1.8.19(typescript@5.2.2)
+  workbox-window:
+    specifier: ^7.0.0
+    version: 7.0.0
 
 packages:
 

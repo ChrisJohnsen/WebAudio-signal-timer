@@ -9,6 +9,7 @@
     "Nyquist",
     "Pausable",
     "stddev",
+    "vite",
     "vueuse"
   ],
   "ignoreWords": [],
