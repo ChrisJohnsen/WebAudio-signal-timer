@@ -401,8 +401,8 @@ describe('useTimingRecovery', () => {
     const events = generateEvents(simpleTimings(4, p, d))
     await pushEvents(event, events)
 
-    expect(period.value).to.be.closeTo(p, closeDelta)
-    expect(duration.value).to.be.closeTo(d, closeDelta)
+    expect(period.value * 1000).to.be.closeTo(p, closeDelta)
+    expect(duration.value * 1000).to.be.closeTo(d, closeDelta)
     expect(next.value).to.have.property('type', 'start')
     expect(next.value)
       .to.have.property('date')
