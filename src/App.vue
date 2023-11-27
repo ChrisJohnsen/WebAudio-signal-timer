@@ -332,6 +332,9 @@ onUnmounted(() => {
       </div>
     </fieldset>
   </main>
+  <footer>
+    Source at <a href="https://github.com/ChrisJohnsen/WebAudio-signal-timer">GitHub</a>
+  </footer>
 </template>
 
 <style scoped>
