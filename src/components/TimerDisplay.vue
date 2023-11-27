@@ -47,8 +47,8 @@ function t(secs: number) {
     (underTenSeconds
       ? s.toFixed(1)
       : atLeastAMinute
-      ? s.toFixed(0).padStart(2, '0')
-      : s.toFixed(0)) + 's'
+        ? s.toFixed(0).padStart(2, '0')
+        : s.toFixed(0)) + 's'
   const ms = atLeastAMinute
     ? (atLeastAnHour ? m.toString().padStart(2, '0') : m.toString()) + 'm'
     : ''
