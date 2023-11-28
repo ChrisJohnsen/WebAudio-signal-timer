@@ -27,11 +27,18 @@ import useTimingRecovery, { type Event } from './composables/useTimingRecovery'
 
 const swUpdateReady = ref(false)
 let updateSW: undefined | (() => Promise<void>)
+let versionString = '<unknown version>'
 
 onBeforeMount(() => {
   const sw = useRegisterSW()
   watch(sw.needRefresh, (nr) => (swUpdateReady.value = nr), { immediate: true })
   updateSW = sw.updateServiceWorker
+
+  const applicationName = document.head.querySelector('meta[name="application-name"]')
+  if (applicationName && applicationName instanceof HTMLMetaElement) {
+    const newVersionString = applicationName.content.split(' ')[1]
+    if (newVersionString) versionString = newVersionString
+  }
 })
 
 const running = ref(false)
@@ -333,7 +340,9 @@ onUnmounted(() => {
     </fieldset>
   </main>
   <footer>
-    Source at <a href="https://github.com/ChrisJohnsen/WebAudio-signal-timer">GitHub</a>
+    Source at <a href="https://github.com/ChrisJohnsen/WebAudio-signal-timer">GitHub</a> ({{
+      versionString
+    }})
   </footer>
 </template>
 
