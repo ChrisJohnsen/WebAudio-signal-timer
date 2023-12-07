@@ -1,0 +1,14 @@
+[
+  {
+    "name": "signal-timer (fake)",
+    "version": "0.0.0",
+    "license": "MIT",
+    "licenseText": "<text of license goes here>"
+  },
+  {
+    "name": "some-library (fake)",
+    "version": "x.y.z",
+    "license": "MIT",
+    "licenseText": "The full license text would be here.\nThere can be multiple lines.\n"
+  }
+]

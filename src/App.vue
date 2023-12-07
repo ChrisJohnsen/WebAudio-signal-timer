@@ -20,6 +20,7 @@ import PeriodSettings from './components/PeriodSettings.vue'
 import SourceSelector from './components/SourceSelector.vue'
 import SpectrogramHistory from './components/SpectrogramHistory.vue'
 import SpectrumLevels from './components/SpectrumLevels.vue'
+import ThirdPartyLicenses from './components/ThirdPartyLicenses.vue'
 import TimerDisplay from './components/TimerDisplay.vue'
 import useAnalyser from './composables/useAnalyser'
 import useSignalDetector from './composables/useSignalDetector'
@@ -94,6 +95,10 @@ const recoveredPeriod = ref(NaN)
 const recoveredDuration = ref(NaN)
 const predictedNext = ref<Event | null>(null)
 
+// third-party license data
+const showLicenses = ref(false)
+const licenseData = ref<any>()
+
 const audioContext = new AudioContext() // this may generate a warning since this isn't triggered by a "user gesture"
 let resetTiming: () => void
 
@@ -110,6 +115,11 @@ function stop() {
 }
 
 onMounted(() => {
+  fetch('./licenses.json')
+    .then((r) => r.json())
+    .then((j) => (licenseData.value = j))
+    .catch(() => (licenseData.value = undefined))
+
   audioContext.suspend() // wait for resume, don't just start when the first source node is started
   audioContext.addEventListener('statechange', () => {
     running.value = audioContext ? audioContext.state == 'running' : false
@@ -343,6 +353,12 @@ onUnmounted(() => {
     Source at <a href="https://github.com/ChrisJohnsen/WebAudio-signal-timer">GitHub</a> ({{
       versionString
     }})
+    <template v-if="licenseData">
+      <input id="show3pl" type="checkbox" v-model="showLicenses" /><label for="show3pl">
+        Show Third-Party Software</label
+      >
+    </template>
+    <ThirdPartyLicenses v-if="showLicenses" :license-data="licenseData" />
   </footer>
 </template>
 

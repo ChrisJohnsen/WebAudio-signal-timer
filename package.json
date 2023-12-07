@@ -37,6 +37,7 @@
     "npm-run-all2": "^6.1.1",
     "prettier": "^3.1.0",
     "prettier-plugin-organize-imports": "^3.2.4",
+    "rollup-license-plugin": "^2.0.0",
     "typescript": "~5.2.2",
     "vite": "^5.0.2",
     "vite-plugin-pwa": "^0.17.2",
@@ -44,5 +45,10 @@
     "vitest": "1.0.0-beta.5",
     "vue-tsc": "^1.8.22",
     "workbox-window": "^7.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "get-npm-tarball-url": "<2.1"
+    }
   }
 }
