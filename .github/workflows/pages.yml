@@ -12,39 +12,46 @@ concurrency:
   group: pages
 
 env:
-  # first always_build branch is rendered to Pages root; others are put in /{branch-name} subdirs
+  # first build_branches branch is rendered to Pages root; others are put in /{branch-name} subdirs
 
   # even if the repo's default branch isn't going to be the Pages root, it should probably be built since its caches can be used when the workflow is triggered for other branches
-  always_build: main, pu
+  build_branches: main, pu
 
 jobs:
   branch_info:
     name: Convert ref list to matrix include
     runs-on: ubuntu-latest
     steps:
-      - id: default_branch
-        name: Get repo's default branch
-        run: |
-          default=$(gh api /repos/"$REPO" --jq .default_branch) # https://stackoverflow.com/a/28669194
-          printf 'Default branch: `%s`\n\n' "$default"
-          printf 'branch=%s\n' "$default" >> $GITHUB_OUTPUT
-        env:
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - id: branches
+        name: Get repo's branch info
+        run: |
+          default=$(gh api /repos/"$REPO" --jq .default_branch) # https://stackoverflow.com/a/28669194
+          printf 'Default branch: `%s`\n\n' "$default"
+          printf 'default=%s\n' "$default" >> $GITHUB_OUTPUT
+
+          # NOTE: if there are too many branches, this may not be a complete list due to API pagination
+          branches=$(gh api /repos/"$REPO"/branches --jq '[ .[] | .name ]')
+          printf 'All Branches: `%s`\n\n' "$branches"
+          printf 'list=%s\n' "$branches" >> $GITHUB_OUTPUT
+        env:
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
       - id: get_info
         name: Convert ref list to matrix include
         run: |
           info=`node --eval '
-            const bs = process.env.always_build.split(",")
+            const bs = process.env.build_branches.split(",")
               .map(b => b.trim()).filter(b => b)
             const trig = process.env.trigger?.trim()
             if(trig) bs.push(trig)
-            const ubs = Array.from(new Set(bs).values())
+            const bl = new Set(JSON.parse(process.env.branches))
+            const ubs = Array.from(new Set(bs))
+              .filter((b, i) => i < 1 || bl.has(b))
 
-            const root = bs[0]
+            const root = ubs[0]
             const def = process.env.default?.trim() ?? "main"
             const required = b => b == root || b == trig
             const cache = b => trig == def || b != trig
@@ -61,7 +68,8 @@ jobs:
           printf 'Branch Info JSON: `%s`\n\n' "$info"
           printf 'info=%s\n' "$info" >> $GITHUB_OUTPUT
         env:
-          default: ${{ steps.default_branch.outputs.branch }}
+          default: ${{ steps.branches.outputs.default }}
+          branches: ${{ steps.branches.outputs.list }}
           trigger: ${{ github.ref_name }}
     outputs:
       info: ${{ steps.get_info.outputs.info }}
