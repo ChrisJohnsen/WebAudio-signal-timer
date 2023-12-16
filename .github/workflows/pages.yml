@@ -97,19 +97,19 @@ jobs:
         with:
           path: dist
           key: built-pages-${{ matrix.subdir }}-${{ steps.sha.outputs.sha }}
-      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+      - if: ${{ ! steps.cache.outputs.cache-hit }}
         uses: pnpm/action-setup@v2
-      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+      - if: ${{ ! steps.cache.outputs.cache-hit }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+      - if: ${{ ! steps.cache.outputs.cache-hit }}
         run: pnpm install
-      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
-        uses: actions/configure-pages@v3
+      - if: ${{ ! steps.cache.outputs.cache-hit }}
+        uses: actions/configure-pages@v4
         id: pages
-      - if: ${{ ! matrix.cache || ! steps.cache.outputs.cache-hit }}
+      - if: ${{ ! steps.cache.outputs.cache-hit }}
         run: |
           pnpm build \
             --outDir=dist/"$SUBDIR" \
@@ -120,7 +120,7 @@ jobs:
           BASE: ${{ steps.pages.outputs.base_path }}
       - name: Create (partial) pages artifact for ${{ matrix.branch }}
         run: (cd dist && tar czf - .) > pages.tar.gz
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: pages-${{ matrix.branch }}
           path: pages.tar.gz
@@ -140,7 +140,7 @@ jobs:
         run: |
           mkdir "$RUNNER_TEMP"/separate
           mkdir "$RUNNER_TEMP"/combined
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           # no name => download all artifacts (just from the current workflow run?)
           path: ${{ runner.temp }}/separate
@@ -153,6 +153,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v2
         with:
           path: ${{ runner.temp }}/combined/
-      - uses: actions/deploy-pages@v2
+      - uses: actions/deploy-pages@v3
         id: deployment
 # spell-checker: words subdir subdirs
