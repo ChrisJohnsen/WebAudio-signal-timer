@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  get-npm-tarball-url: <2.1
-
 dependencies:
   '@vueuse/core':
     specifier: ^10.9.0
@@ -3393,8 +3390,8 @@ packages:
       hasown: 2.0.2
     dev: true
 
-  /get-npm-tarball-url@2.0.3:
-    resolution: {integrity: sha512-R/PW6RqyaBQNWYaSyfrh54/qtcnOp22FHCCiRhSSZj0FP3KQWCsxxt0DzIdVTbwTqe9CtQfvl/FPD4UIPt4pqw==}
+  /get-npm-tarball-url@2.1.0:
+    resolution: {integrity: sha512-ro+DiMu5DXgRBabqXupW38h7WPZ9+Ad8UjwhvsmmN8w1sU7ab0nzAXvVZ4kqYg57OrqomRtJvepX5/xvFKNtjA==}
     engines: {node: '>=12.17'}
     dev: true
 
@@ -4582,7 +4579,7 @@ packages:
     resolution: {integrity: sha512-dcTdmq+vgqNrSq8Q7uXWp+49u8Mq4gDGeUUI92/4+STMYDyJmO+H+WFLq8DGLWECZ8ckUYAzlfbOyfmbHBE68w==}
     engines: {node: '>=18.0.0'}
     dependencies:
-      get-npm-tarball-url: 2.0.3
+      get-npm-tarball-url: 2.1.0
       node-fetch: 3.3.2
       spdx-expression-validate: 2.0.0
     dev: true
