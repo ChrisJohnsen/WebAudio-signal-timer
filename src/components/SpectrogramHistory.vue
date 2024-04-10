@@ -44,8 +44,7 @@ const frequencies = computed(() => {
   const maxFrequency = Math.min(props.band.high, nyquistFrequency)
   return { minFrequency, maxFrequency, bandWidth: maxFrequency - minFrequency }
 })
-
-const canvasRef = ref<HTMLCanvasElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement>()
 const canvasWidth = ref(100)
 
 const powerLegendHeight = 14 // includes separator
