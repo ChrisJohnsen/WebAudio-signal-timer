@@ -48,7 +48,8 @@
   },
   "pnpm": {
     "overrides": {
-      "get-npm-tarball-url": "<2.1"
+      "get-npm-tarball-url": "<2.1",
+      "vite@>=5.0.0 <=5.0.12": ">=5.0.13"
     }
   }
 }

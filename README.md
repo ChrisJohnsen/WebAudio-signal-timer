@@ -92,6 +92,8 @@ This project is built by [Vite][vite] and uses the [Vue][vue] JavaScript UI fram
     pnpm build        # production build to dist/
     pnpm preview      # serve dist/
 
+    pnpm audit        # check for deps that should be updated
+
 ### Published on GitHub Pages
 
 A GitHub Actions [workflow][pages wf] automatically builds this project and deploys it to GitHub pages when the `main` branch is pushed. Other branches might also be occasionally published in subdirectories; check the workflow definition.
