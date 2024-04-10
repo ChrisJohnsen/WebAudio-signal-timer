@@ -39,7 +39,7 @@
     "prettier-plugin-organize-imports": "^3.2.4",
     "rollup-license-plugin": "^3.0.0",
     "typescript": "~5.4.4",
-    "vite": "^5.0.12",
+    "vite": "^5.2.8",
     "vite-plugin-pwa": "^0.19.8",
     "vite-plugin-version-mark": "^0.0.12",
     "vitest": "^1.4.0",
@@ -48,8 +48,7 @@
   },
   "pnpm": {
     "overrides": {
-      "get-npm-tarball-url": "<2.1",
-      "vite@>=5.0.0 <=5.0.12": ">=5.0.13"
+      "get-npm-tarball-url": "<2.1"
     }
   }
 }
