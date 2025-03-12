@@ -85,7 +85,6 @@ function drawLegend(canvas: HTMLCanvasElement) {
     ctx.fillStyle = cubeYfColor(color)
     ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
   }
-  props.decibelRange.max - props.decibelRange.min
   ctx.fillStyle = textColor.value || 'black'
   ctx.font = `${frequencyLabelsHeight}px sans-serif`
   drawLabels(
