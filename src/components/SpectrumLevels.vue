@@ -2,8 +2,7 @@
 import { cubeYfColor, colorCount as cubeYFColorCount } from '@/assets/cubeYF'
 import { useBins, useFFTPixelBins } from '@/composables/useBins'
 import { labelPositions } from '@/labelPositions'
-import { useCssVar } from '@vueuse/core'
-import { useResizeObserver } from '@vueuse/core/index.cjs'
+import { useCssVar, useResizeObserver } from '@vueuse/core'
 import { computed, onMounted, ref, toRef, watchEffect, type PropType, type Ref } from 'vue'
 
 const props = defineProps({
