@@ -93,12 +93,12 @@ jobs:
       - if: ${{ matrix.cache }}
         name: Cache dist/
         id: cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: dist
           key: built-pages-${{ matrix.subdir }}-${{ steps.sha.outputs.sha }}
       - if: ${{ ! steps.cache.outputs.cache-hit }}
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
       - if: ${{ ! steps.cache.outputs.cache-hit }}
         uses: actions/setup-node@v4
         with:
@@ -107,7 +107,7 @@ jobs:
       - if: ${{ ! steps.cache.outputs.cache-hit }}
         run: pnpm install
       - if: ${{ ! steps.cache.outputs.cache-hit }}
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
         id: pages
       - if: ${{ ! steps.cache.outputs.cache-hit }}
         run: |
@@ -153,6 +153,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ runner.temp }}/combined/
-      - uses: actions/deploy-pages@v3
+      - uses: actions/deploy-pages@v4
         id: deployment
 # spell-checker: words subdir subdirs
