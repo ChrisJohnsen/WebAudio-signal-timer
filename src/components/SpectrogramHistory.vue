@@ -86,7 +86,7 @@ function drawLegend(canvas: HTMLCanvasElement) {
     ctx.fillRect(binStart, powerLegendTop, binEnd - binStart, powerLegendHeight)
   }
   props.decibelRange.max - props.decibelRange.min
-  ctx.fillStyle = textColor.value
+  ctx.fillStyle = textColor.value || 'black'
   ctx.font = `${frequencyLabelsHeight}px sans-serif`
   drawLabels(
     ctx,
@@ -104,9 +104,9 @@ function drawLegend(canvas: HTMLCanvasElement) {
 
   // frequency labels
   const frequencyLabelsTop = powerLegendHeight
-  ctx.fillStyle = bgColor.value
+  ctx.fillStyle = bgColor.value || 'white'
   ctx.fillRect(0, frequencyLabelsTop, canvas.width, frequencyLabelsHeight)
-  ctx.fillStyle = textColor.value
+  ctx.fillStyle = textColor.value || 'black'
   ctx.font = `${frequencyLabelsHeight}px sans-serif`
   drawLabels(
     ctx,

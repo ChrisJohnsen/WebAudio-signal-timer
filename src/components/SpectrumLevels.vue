@@ -96,7 +96,7 @@ function updateSpectrum() {
 
   const data = props.data
 
-  ctx.fillStyle = bgColor.value
+  ctx.fillStyle = bgColor.value || 'white'
   ctx.fillRect(0, 0, width, height)
   const max: { power: number; bar?: { x: number; width: number; y: number; height: number } } = {
     power: -Infinity
@@ -131,7 +131,7 @@ function drawLines(ctx: CanvasRenderingContext2D) {
 
   const labelHeight = 10
   const labelWidth = 50
-  ctx.fillStyle = textColor.value
+  ctx.fillStyle = textColor.value || 'black'
   ctx.font = `${labelHeight}px sans-serif`
   ctx.textBaseline = 'bottom'
   for (const { value, valueStep, pixelPosition: y } of labelPositions(
