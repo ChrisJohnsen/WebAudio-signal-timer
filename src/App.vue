@@ -97,7 +97,7 @@ const predictedNext = ref<Event | null>(null)
 
 // third-party license data
 const showLicenses = ref(false)
-const licenseData = ref<any>()
+const licenseData = ref<object[] | undefined>()
 
 const audioContext = new AudioContext() // this may generate a warning since this isn't triggered by a "user gesture"
 let resetTiming: () => void

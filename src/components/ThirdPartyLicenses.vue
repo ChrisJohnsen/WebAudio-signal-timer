@@ -7,7 +7,7 @@ export type LicenseData = {
   license: string
   licenseText: string
 }
-const props = defineProps<{ licenseData: any }>()
+const props = defineProps<{ licenseData: object[] | undefined }>()
 const licenses = ref(new Array<LicenseData>())
 watch(
   toRef(props, 'licenseData'),
