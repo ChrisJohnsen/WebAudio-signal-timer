@@ -158,6 +158,7 @@ export class Stats implements StatValues {
     return clone
   }
   public readonly(): StatValues & { clone(): Stats } {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this
     return {
       get count() {

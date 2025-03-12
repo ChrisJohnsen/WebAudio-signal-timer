@@ -62,7 +62,6 @@ watch(selectedSource, (sel) => {
   emitSource(node)
 })
 watch(toRef(props, 'audioContext'), () => {
-  // eslint-disable-next-line no-self-assign
   selectedSource.value = selectedSource.value // rebuild source
 })
 
