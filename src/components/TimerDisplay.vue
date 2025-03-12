@@ -29,7 +29,8 @@ watch([toRef(props, 'next'), toRef(props, 'doUpdates')], ([next, doUpdates]) => 
 
 const remainingToNext = computed(() => {
   if (!props.doUpdates || !props.next) return '-h--m--s'
-  timerUpdated.value
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  timerUpdated.value // side effect: register for changes of timerUpdated
   return t((props.next.date - Date.now()) / 1000)
 })
 
