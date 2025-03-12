@@ -150,7 +150,7 @@ jobs:
           for f in pages-*/*.tar.gz; do
             (cd "$RUNNER_TEMP"/combined && tar xzf -) < $f
           done
-      - uses: actions/upload-pages-artifact@v2
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ runner.temp }}/combined/
       - uses: actions/deploy-pages@v3
