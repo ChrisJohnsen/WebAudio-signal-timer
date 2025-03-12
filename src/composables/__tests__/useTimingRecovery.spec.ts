@@ -12,10 +12,10 @@ import { nextTick, shallowRef, type ShallowRef } from 'vue'
 describe('Stats', () => {
   test('n=0', () => {
     const s = new Stats()
-    expect(s.count).to.equal(0)
-    expect(s.mean).to.be.NaN
-    expect(s.variance).to.be.NaN
-    expect(s.stddev).to.be.NaN
+    expect(s.count).toEqual(0)
+    expect(s.mean).toBeNaN()
+    expect(s.variance).toBeNaN()
+    expect(s.stddev).toBeNaN()
   })
   test('n=1', () => {
     const s = new Stats()
@@ -50,14 +50,14 @@ describe('Stats', () => {
     s.add(7)
 
     expect(s6.count).to.equal(6)
-    expect(s6.mean).to.be.closeTo(4 + 5 / 6, 5e-10)
-    expect(s6.variance).to.be.closeTo(4 + 17 / 36, 5e-10)
-    expect(s6.stddev).to.be.closeTo(Math.sqrt(4 + 17 / 36), 5e-10)
+    expect(s6.mean).toBeCloseTo(4 + 5 / 6, 5e-10)
+    expect(s6.variance).toBeCloseTo(4 + 17 / 36, 5e-10)
+    expect(s6.stddev).toBeCloseTo(Math.sqrt(4 + 17 / 36), 5e-10)
 
     expect(s7.count).to.equal(7)
-    expect(s7.mean).to.be.closeTo(4 + 5 / 7, 5e-10)
-    expect(s7.variance).to.be.closeTo(3 + 45 / 49, 5e-10)
-    expect(s7.stddev).to.be.closeTo(Math.sqrt(3 + 45 / 49), 5e-10)
+    expect(s7.mean).toBeCloseTo(4 + 5 / 7, 5e-10)
+    expect(s7.variance).toBeCloseTo(3 + 45 / 49, 5e-10)
+    expect(s7.stddev).toBeCloseTo(Math.sqrt(3 + 45 / 49), 5e-10)
 
     expect(s.count).to.equal(8)
     expect(s.mean).to.equal(5)
@@ -67,99 +67,99 @@ describe('Stats', () => {
     s.remove(7)
 
     expect(s.count).to.equal(7)
-    expect(s.mean).to.be.closeTo(s7.mean, 5e-10)
-    expect(s.variance).to.be.closeTo(s7.variance, 5e-10)
-    expect(s.stddev).to.be.closeTo(s7.stddev, 5e-10)
+    expect(s.mean).toBeCloseTo(s7.mean, 5e-10)
+    expect(s.variance).toBeCloseTo(s7.variance, 5e-10)
+    expect(s.stddev).toBeCloseTo(s7.stddev, 5e-10)
 
     s.remove(4)
 
     expect(s.count).to.equal(6)
-    expect(s.mean).to.be.closeTo(s6.mean, 5e-10)
-    expect(s.variance).to.be.closeTo(s6.variance, 5e-10)
-    expect(s.stddev).to.be.closeTo(s6.stddev, 5e-10)
+    expect(s.mean).toBeCloseTo(s6.mean, 5e-10)
+    expect(s.variance).toBeCloseTo(s6.variance, 5e-10)
+    expect(s.stddev).toBeCloseTo(s6.stddev, 5e-10)
   })
 })
 
 describe('Truncated', () => {
   test('sorts initial values', () => {
-    expect(Array.from(new Truncated([4, 3, 1, 5, 2], 1).truncated())).to.deep.equal([1, 2, 3, 4, 5])
+    expect(Array.from(new Truncated([4, 3, 1, 5, 2], 1).truncated())).toEqual([1, 2, 3, 4, 5])
   })
 
   test('sorts later values values', () => {
     const t = new Truncated([4, 5, 2], 1)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 4, 5])
+    expect(Array.from(t.truncated())).toEqual([2, 4, 5])
 
     t.add(3)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3, 4, 5])
+    expect(Array.from(t.truncated())).toEqual([2, 3, 4, 5])
 
     t.add(1)
-    expect(Array.from(t.truncated())).to.deep.equal([1, 2, 3, 4, 5])
+    expect(Array.from(t.truncated())).toEqual([1, 2, 3, 4, 5])
   })
 
   test('default truncates to 50% of values around median', () => {
     const t = new Truncated([])
-    expect(Array.from(t.truncated())).to.deep.equal([])
+    expect(Array.from(t.truncated())).toEqual([])
 
     // 1: 0 left over
     t.add(1)
-    expect(Array.from(t.truncated())).to.deep.equal([1])
+    expect(Array.from(t.truncated())).toEqual([1])
     expect(t.stats.mean).to.equal(1)
 
     // 2 & 3: 1 left over; mod 4 == 1, so extra goes to head
     t.add(2)
-    expect(Array.from(t.truncated())).to.deep.equal([2])
+    expect(Array.from(t.truncated())).toEqual([2])
     expect(t.stats.count).to.equal(1)
     expect(t.stats.mean).to.equal(2)
     t.add(3)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3])
+    expect(Array.from(t.truncated())).toEqual([2, 3])
     expect(t.stats.mean).to.equal(1 + 3 / 2) // first-1 + (length+1)/2: sum(first...first+length-1)/length
 
     // 4 & 5: 2 left over; split evenly to head and tail
     t.add(4)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3])
+    expect(Array.from(t.truncated())).toEqual([2, 3])
     expect(t.stats.mean).to.equal(1 + 3 / 2)
     t.add(5)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3, 4])
+    expect(Array.from(t.truncated())).toEqual([2, 3, 4])
     expect(t.stats.mean).to.equal(1 + 4 / 2)
 
     // 6 & 7: 3 left over; mod 4 == 3, so extra goes to tail
     t.add(6)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3, 4])
+    expect(Array.from(t.truncated())).toEqual([2, 3, 4])
     expect(t.stats.mean).to.equal(1 + 4 / 2)
     t.add(7)
-    expect(Array.from(t.truncated())).to.deep.equal([2, 3, 4, 5])
+    expect(Array.from(t.truncated())).toEqual([2, 3, 4, 5])
     expect(t.stats.mean).to.equal(1 + 5 / 2)
 
     // 8 & 9: 4 left over; split evenly to head and tail
     t.add(8)
-    expect(Array.from(t.truncated())).to.deep.equal([3, 4, 5, 6])
+    expect(Array.from(t.truncated())).toEqual([3, 4, 5, 6])
     expect(t.stats.mean).to.equal(2 + 5 / 2)
     t.add(9)
-    expect(Array.from(t.truncated())).to.deep.equal([3, 4, 5, 6, 7])
+    expect(Array.from(t.truncated())).toEqual([3, 4, 5, 6, 7])
     expect(t.stats.mean).to.equal(2 + 6 / 2)
 
     // 10 & 11: 5 left over; mod 4 == 1, so extra goes to head
     t.add(10)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8])
     expect(t.stats.mean).to.equal(3 + 6 / 2)
     t.add(11)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8, 9])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8, 9])
     expect(t.stats.mean).to.equal(3 + 7 / 2)
 
     // 12 & 13: 6 left over; split evenly to head and tail
     t.add(12)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8, 9])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8, 9])
     expect(t.stats.mean).to.equal(3 + 7 / 2)
     t.add(13)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8, 9, 10])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8, 9, 10])
     expect(t.stats.mean).to.equal(3 + 8 / 2)
 
     // 14 & 15: 7 left over; mod 4 == 3, so extra goes to tail
     t.add(14)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8, 9, 10])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8, 9, 10])
     expect(t.stats.mean).to.equal(3 + 8 / 2)
     t.add(15)
-    expect(Array.from(t.truncated())).to.deep.equal([4, 5, 6, 7, 8, 9, 10, 11])
+    expect(Array.from(t.truncated())).toEqual([4, 5, 6, 7, 8, 9, 10, 11])
     expect(t.stats.mean).to.equal(3 + 9 / 2)
   })
 })
@@ -170,17 +170,17 @@ describe('TimingRecovery', () => {
   test('no start event gives no values', () => {
     const { period, duration, next } = new TimingRecovery([])
 
-    expect(period).to.be.NaN
-    expect(duration).to.be.NaN
-    expect(next).to.be.null
+    expect(period).toBeNaN()
+    expect(duration).toBeNaN()
+    expect(next).toBeNull()
   })
 
   test('only start event gives no values', () => {
     const tr = new TimingRecovery(generateEvents(simpleTimings(1, 0, 0)))
 
-    expect(tr.period).to.be.NaN
-    expect(tr.duration).to.be.NaN
-    expect(tr.next).to.be.null
+    expect(tr.period).toBeNaN()
+    expect(tr.duration).toBeNaN()
+    expect(tr.next).toBeNull()
   })
 
   test('[start, stop] gives only duration', () => {
@@ -188,9 +188,9 @@ describe('TimingRecovery', () => {
       d = 1_000
     const tr = new TimingRecovery(generateEvents(simpleTimings(2, p, d)))
 
-    expect(tr.period).to.be.NaN
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
-    expect(tr.next).to.be.null
+    expect(tr.period).toBeNaN()
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
+    expect(tr.next).toBeNull()
   })
 
   test('[start, stop, start] gives period, duration, and next stop', () => {
@@ -199,8 +199,8 @@ describe('TimingRecovery', () => {
     const events = generateEvents(simpleTimings(3, p, d))
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p, closeDelta)
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p, closeDelta)
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -213,8 +213,8 @@ describe('TimingRecovery', () => {
     const events = generateEvents(simpleTimings(4, p, d))
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p, closeDelta)
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p, closeDelta)
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'start')
     expect(tr.next)
       .to.have.property('date')
@@ -242,8 +242,8 @@ describe('TimingRecovery', () => {
 
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p - 60, closeDelta)
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p - 60, closeDelta)
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -271,8 +271,8 @@ describe('TimingRecovery', () => {
 
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p - 31, closeDelta)
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p - 31, closeDelta)
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -299,8 +299,8 @@ describe('TimingRecovery', () => {
 
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p, closeDelta)
-    expect(tr.duration).to.be.closeTo(d + 3, closeDelta)
+    expect(tr.period).toBeCloseTo(p, closeDelta)
+    expect(tr.duration).toBeCloseTo(d + 3, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -314,7 +314,7 @@ describe('TimingRecovery', () => {
       //                      t
       ...[d, p], //           t + p
       ...[d, 2 * p + 456], // t + 2p + 456; divided into two periods of p+228; note 456 < p/10
-      ...[d, p - 200] //     t + 3p + 256
+      ...[d, p - 200] //      t + 3p + 256
     ])
     const lastStart = events[events.length - 1]
 
@@ -322,8 +322,8 @@ describe('TimingRecovery', () => {
 
     const tr = new TimingRecovery(events)
 
-    expect(tr.period).to.be.closeTo(p + 114, closeDelta) // -200 [0 228] 228
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p + 114, closeDelta) // -200 [0 228] 228
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -340,8 +340,8 @@ describe('TimingRecovery', () => {
 
     for (const event of moreEvents) tr.addEvent(event)
 
-    expect(tr.period).to.be.closeTo(p - 21, closeDelta) // -200 -33 [-33 -33 -18 0] 228 228
-    expect(tr.duration).to.be.closeTo(d, closeDelta)
+    expect(tr.period).toBeCloseTo(p - 21, closeDelta) // -200 -33 [-33 -33 -18 0] 228 228
+    expect(tr.duration).toBeCloseTo(d, closeDelta)
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -363,8 +363,8 @@ describe('TimingRecovery', () => {
 
     const tr = new TimingRecovery(events, p, d)
 
-    expect(tr.period).to.be.closeTo(p + 10, closeDelta) // [+0] and -120 [-70 +100] +450
-    expect(tr.duration).to.be.closeTo(d - 20, closeDelta) // [+0] and -90 [-65 +5] +70
+    expect(tr.period).toBeCloseTo(p + 10, closeDelta) // [+0] and -120 [-70 +100] +450
+    expect(tr.duration).toBeCloseTo(d - 20, closeDelta) // [+0] and -90 [-65 +5] +70
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -382,8 +382,8 @@ describe('TimingRecovery', () => {
 
     for (const event of moreEvents) tr.addEvent(event)
 
-    expect(tr.period).to.be.closeTo(p - 11, closeDelta) // -500 -120 [-94 -70 +20 +100] +220 +450
-    expect(tr.duration).to.be.closeTo(d - 4, closeDelta) // and -90 -80 [-65 -6 +5 +50] +60 +70
+    expect(tr.period).toBeCloseTo(p - 11, closeDelta) // -500 -120 [-94 -70 +20 +100] +220 +450
+    expect(tr.duration).toBeCloseTo(d - 4, closeDelta) // and -90 -80 [-65 -6 +5 +50] +60 +70
     expect(tr.next).to.have.property('type', 'stop')
     expect(tr.next)
       .to.have.property('date')
@@ -401,8 +401,8 @@ describe('useTimingRecovery', () => {
     const events = generateEvents(simpleTimings(4, p, d))
     await pushEvents(event, events)
 
-    expect(period.value * 1000).to.be.closeTo(p, closeDelta)
-    expect(duration.value * 1000).to.be.closeTo(d, closeDelta)
+    expect(period.value * 1000).toBeCloseTo(p, closeDelta)
+    expect(duration.value * 1000).toBeCloseTo(d, closeDelta)
     expect(next.value).to.have.property('type', 'start')
     expect(next.value)
       .to.have.property('date')
