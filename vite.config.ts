@@ -10,7 +10,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vite.dev/config/
 export default defineConfig({
   build: {
-    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari114'],
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari114']
   },
   plugins: [
     vue(),
