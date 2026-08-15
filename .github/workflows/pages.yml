@@ -143,6 +143,7 @@ jobs:
         with:
           # no name => download all artifacts (just from the current workflow run?)
           path: ${{ runner.temp }}/separate
+          merge-multiple: true
       - name: Merge pages artifacts
         run: |
           cd "$RUNNER_TEMP"/separate
