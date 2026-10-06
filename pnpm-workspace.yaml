@@ -1,6 +1,8 @@
 allowBuilds:
   esbuild: false
 overrides:
+  '@vue/server-renderer@>=3.5 <3.5.42': ^3.5.42
   esbuild@>=0.17.0 <0.28.1: ^0.28.1
   minimatch@>=9.0.0 <9.0.6: '>=9.0.6 <10.0.0'
   serialize-javascript@<7.0.5: '>=7.0.5'
+  eslint-plugin-vue@>=10.0 <10.5.1: ^10.6 # minimum version for postcss-selector-parser 7.x
